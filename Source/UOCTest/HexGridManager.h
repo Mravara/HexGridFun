@@ -26,8 +26,15 @@ namespace std {
 
 // Point for Grid Layout
 struct Point {
-	double x, y;
-	Point(double x_, double y_): x(x_), y(y_) {}
+	double X, Y;
+	Point(double x_, double y_): X(x_), Y(y_) {}
+};
+
+// Fraction
+struct FractionalHex {
+	const double Q, R, S;
+	FractionalHex(double q_, double r_, double s_)
+	: Q(q_), R(r_), S(s_) {}
 };
 
 UCLASS()
@@ -42,6 +49,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	Hex WorldToHex(FVector& Location);
+	FractionalHex LocationToFractionalHex(FVector& Location);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -50,6 +60,9 @@ private:
 	void GenerateGrid();
 	
 	static AHexTile* GetHexTile(FIntVector Coordinates);
+
+	// Rounding from fractal coordinates
+	Hex HexRound(FractionalHex h);
 	
 	// Arithmetics
 	static Hex Add(const Hex A, const Hex B);

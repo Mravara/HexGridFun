@@ -5,6 +5,8 @@
 
 #include "Hex.h"
 #include "LineTypes.h"
+#include "UOCTestGameMode.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AHexGridManager::AHexGridManager()
@@ -18,6 +20,9 @@ AHexGridManager::AHexGridManager()
 void AHexGridManager::BeginPlay()
 {
 	Super::BeginPlay();
+
+	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	GameMode->GridManager = this;
 
 	// init vars
 	TileWidth = OuterTileSize * 2.f;
@@ -56,11 +61,8 @@ void AHexGridManager::GenerateGrid()
 		{
 			// Map.insert(Hex(q, r, -q-r));
 			Point SpawnLocation = HexToWorld(Hex(q, r, -q-r));
-			AHexTile* Tile = GetWorld()->SpawnActor<AHexTile>(GrassTile, FVector(SpawnLocation.x, SpawnLocation.y, 0.f), FRotator());
+			AHexTile* Tile = GetWorld()->SpawnActor<AHexTile>(GrassTile, FVector(SpawnLocation.X, SpawnLocation.Y, 0.f), FRotator());
 			Tile->SetActorLabel(FString::Printf(TEXT("Tile_%d_%d_%d"), q, r, -q-r));
-			UE_LOG(LogTemp, Warning, TEXT("spawning hex: %d %d %d"), q, r, -q-r);
-			UE_LOG(LogTemp, Warning, TEXT("on location: %f %f"), SpawnLocation.x, SpawnLocation.y);
-			UE_LOG(LogTemp, Warning, TEXT("----"));
 		}
 	}
 
@@ -73,13 +75,58 @@ void AHexGridManager::GenerateGrid()
 Point AHexGridManager::HexToWorld(const Hex Tile) const
 {
 	const float Right = Tile.Q * HorizontalTileSpacing; // 150
-	const float Up = -VerticalTileSpacing * Tile.Q + Tile.R * -VerticalTileSpacing * 2.f; // 86.6
+	const float Up = VerticalTileSpacing * Tile.Q + Tile.R * VerticalTileSpacing * 2.f; // 86.6
 
 	// His way
 	// Right = OuterTileSize * (3./2 * Tile.Q);
 	// Up = -OuterTileSize * (sqrt(3)/2 * Tile.Q + sqrt(3) * Tile.R);
 
 	return Point(Up, Right);
+}
+
+Hex AHexGridManager::WorldToHex(FVector& Location)
+{
+	// const float Right = Tile.Q * HorizontalTileSpacing; // 150
+	// const float Up = -VerticalTileSpacing * Tile.Q + Tile.R * -VerticalTileSpacing * 2.f; // 86.6
+	//
+	// // His way
+	// // Right = OuterTileSize * (3./2 * Tile.Q);
+	// // Up = -OuterTileSize * (sqrt(3)/2 * Tile.Q + sqrt(3) * Tile.R);
+	//
+	// return Point(Up, Right);
+	return HexRound(LocationToFractionalHex(Location));
+}
+
+FractionalHex AHexGridManager::LocationToFractionalHex(FVector& Location)
+{
+	Point pt = Point(Location.Y / OuterTileSize, Location.X / OuterTileSize);
+	double q = (2.0 / 3.0) * pt.X;
+    double r = (-1.0 / 3.0) * pt.X + sqrt(3.0) / 3.0 * pt.Y;
+	return FractionalHex(q, r, -q - r);
+}
+
+Hex AHexGridManager::HexRound(FractionalHex h)
+{
+	int q = int(round(h.Q));
+	int r = int(round(h.R));
+	int s = int(round(h.S));
+	double q_diff = abs(q - h.Q);
+	double r_diff = abs(r - h.R);
+	double s_diff = abs(s - h.S);
+	if (q_diff > r_diff && q_diff > s_diff)
+	{
+		q = -r - s;
+	}
+	else if (r_diff > s_diff)
+	{
+		r = -q - s;
+	}
+	else
+	{
+		s = -q - r;
+	}
+	
+	return Hex(q, r, s);
 }
 
 Hex AHexGridManager::Add(const Hex A, const Hex B)

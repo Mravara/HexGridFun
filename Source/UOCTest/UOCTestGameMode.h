@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "HexGridManager.h"
 #include "GameFramework/GameModeBase.h"
 #include "UOCTestGameMode.generated.h"
 
@@ -14,7 +15,8 @@ class AUOCTestGameMode : public AGameModeBase
 public:
 	AUOCTestGameMode();
 
-	
+	UPROPERTY()
+	AHexGridManager* GridManager;
 };
 
 
