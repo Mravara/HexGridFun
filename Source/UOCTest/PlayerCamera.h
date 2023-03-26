@@ -26,10 +26,24 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// On Mouse Click
+	// When Left Mouse Button is pressed
 	void OnMouseClicked();
 
-	FVector GetClickLocation() const;
+	// When Right Mouse Button is pressed
+	void OnRightMouseClicked();
+
+	// When Right Mouse Button is released
+	void OnRightMouseReleased();
+
+	// When Right Mouse Button is held
+	void OnRightMouseHold();
+
+	// Draw debug line
+	void DrawLine();
+
+	// Used for converting screen to world space coordinates
+	FVector GetMouseWorldLocation() const;
+	
 
 protected:
 	// Called when the game starts or when spawned
@@ -50,4 +64,10 @@ public:
 
 	UPROPERTY(EditAnywhere, Category="Player Camera")
 	const UInputAction* ClickAction;
+
+	UPROPERTY(EditAnywhere, Category="Player Camera")
+	const UInputAction* RightClickAction;
+
+	Hex StartHex;
+	Hex EndHex;
 };

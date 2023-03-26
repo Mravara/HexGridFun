@@ -61,7 +61,7 @@ void AHexGridManager::GenerateGrid()
 		{
 			// Map.insert(Hex(q, r, -q-r));
 			Hex hex = Hex(q, r, -q-r);
-			Point SpawnLocation = HexToWorld(hex);
+			Point SpawnLocation = HexToWorldPoint(hex);
 			AHexTile* Tile = GetWorld()->SpawnActor<AHexTile>(GrassTile, FVector(SpawnLocation.X, SpawnLocation.Y, 0.f), FRotator());
 			Tile->SetActorLabel(FString::Printf(TEXT("Tile_%d_%d_%d"), q, r, -q-r));
 
@@ -85,7 +85,7 @@ AHexTile* AHexGridManager::GetTileByHex(Hex& H)
 	return nullptr;
 }
 
-Point AHexGridManager::HexToWorld(const Hex Tile) const
+Point AHexGridManager::HexToWorldPoint(const Hex Tile) const
 {
 	const float Right = Tile.Q * HorizontalTileSpacing; // 150
 	const float Up = VerticalTileSpacing * Tile.Q + Tile.R * VerticalTileSpacing * 2.f; // 86.6
@@ -95,6 +95,18 @@ Point AHexGridManager::HexToWorld(const Hex Tile) const
 	// Up = -OuterTileSize * (sqrt(3)/2 * Tile.Q + sqrt(3) * Tile.R);
 
 	return Point(Up, Right);
+}
+
+FVector AHexGridManager::HexToWorldLocation(const Hex Tile) const
+{
+	const float Right = Tile.Q * HorizontalTileSpacing; // 150
+	const float Up = VerticalTileSpacing * Tile.Q + Tile.R * VerticalTileSpacing * 2.f; // 86.6
+
+	// His way
+	// Right = OuterTileSize * (3./2 * Tile.Q);
+	// Up = -OuterTileSize * (sqrt(3)/2 * Tile.Q + sqrt(3) * Tile.R);
+
+	return FVector(Up, Right, 0.f);
 }
 
 Hex AHexGridManager::WorldToHex(FVector& Location)

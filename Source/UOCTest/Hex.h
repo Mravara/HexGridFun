@@ -17,9 +17,16 @@ struct UOCTEST_API Hex
 	
 	~Hex();
 
-	const int Q;
-	const int R;
-	const int S;
+	int Q;
+	int R;
+	int S;
+
+	void operator=(const Hex Tile)
+	{
+		Q = Tile.Q;
+		R = Tile.R;
+		S = Tile.S;
+	}
 
 	bool operator==(const Hex Tile) const
 	{

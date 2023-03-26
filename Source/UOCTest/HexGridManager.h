@@ -50,11 +50,20 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	// World coordinate to Hex
 	Hex WorldToHex(FVector& Location);
-	
+
+	// World location to fractional Hex -> used to find Hex
 	FractionalHex LocationToFractionalHex(FVector& Location);
 
+	// Returns associated blueprint to Hex 
 	AHexTile* GetTileByHex(Hex& H);
+
+	// Returns 2D point
+	Point HexToWorldPoint(const Hex Tile) const;
+
+	// Returns 3D point
+	FVector HexToWorldLocation(Hex Tile) const;
 
 protected:
 	// Called when the game starts or when spawned
@@ -74,8 +83,6 @@ private:
 
 	static int Length(const Hex Tile);
 	static int Distance(const Hex A, const Hex B);
-
-	Point HexToWorld(const Hex Tile) const;
 
 	// Fields
 	UPROPERTY(EditAnywhere, Category = "Hex Grid")

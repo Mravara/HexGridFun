@@ -48,6 +48,12 @@ APlayerCamera::APlayerCamera() : APawn()
 	{
 		ClickAction = ActionObject;
 	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction> RightClickInputAction(TEXT("/Game/TopDown/Input/Actions/IA_RightClick"));
+	if (const UInputAction* ActionObject = RightClickInputAction.Object)
+	{
+		RightClickAction = ActionObject;
+	}
 }
 
 // Called when the game starts or when spawned
@@ -74,13 +80,16 @@ void APlayerCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	{
 		// Setup mouse input events
 		EnhancedInputComponent->BindAction(ClickAction, ETriggerEvent::Started, this, &APlayerCamera::OnMouseClicked);
+		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Started, this, &APlayerCamera::OnRightMouseClicked);
+		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Triggered, this, &APlayerCamera::OnRightMouseHold);
+		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Started, this, &APlayerCamera::OnRightMouseReleased);
 	}
 }
 
 void APlayerCamera::OnMouseClicked()
 {
 	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	FVector ClickLocation = GetClickLocation();
+	FVector ClickLocation = GetMouseWorldLocation();
 	Hex Tile = GameMode->GridManager->WorldToHex(ClickLocation);
 	AHexTile* HexTile = GameMode->GridManager->GetTileByHex(Tile);
 	if (HexTile)
@@ -90,7 +99,7 @@ void APlayerCamera::OnMouseClicked()
 	}
 }
 
-FVector APlayerCamera::GetClickLocation() const
+FVector APlayerCamera::GetMouseWorldLocation() const
 {
 	FVector2D MousePosition;
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
@@ -115,8 +124,38 @@ FVector APlayerCamera::GetClickLocation() const
 				return Hit.ImpactPoint;
 			}
 		}
-		
 	}
 
 	return FVector();
+}
+
+void APlayerCamera::OnRightMouseClicked()
+{
+	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	FVector ClickLocation = GetMouseWorldLocation();
+	StartHex = GameMode->GridManager->WorldToHex(ClickLocation);
+}
+
+void APlayerCamera::OnRightMouseReleased()
+{
+	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	FVector ClickLocation = GetMouseWorldLocation();
+	EndHex = GameMode->GridManager->WorldToHex(ClickLocation);
+}
+
+void APlayerCamera::OnRightMouseHold()
+{
+	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	FVector ClickLocation = GetMouseWorldLocation();
+	EndHex = GameMode->GridManager->WorldToHex(ClickLocation);
+	DrawLine();
+}
+
+void APlayerCamera::DrawLine()
+{
+	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	FVector StartLocation = GameMode->GridManager->HexToWorldLocation(StartHex) + FVector::UpVector * 20.f;
+	FVector EndLocation = GameMode->GridManager->HexToWorldLocation(EndHex) + FVector::UpVector * 20.f;
+	DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::White, false, 0.f, 0, 10.f);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("Event on animation!"));
 }
