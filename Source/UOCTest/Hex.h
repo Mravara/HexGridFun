@@ -14,19 +14,10 @@ struct UOCTEST_API Hex
 	Hex(const int q, const int r) : Q(q), R(r), S(-q-r) {}
 	
 	Hex(const int q, const int r, const int s) : Q(q), R(r), S(s) {}
-	
-	~Hex();
 
 	int Q;
 	int R;
 	int S;
-
-	void operator=(const Hex Tile)
-	{
-		Q = Tile.Q;
-		R = Tile.R;
-		S = Tile.S;
-	}
 
 	bool operator==(const Hex Tile) const
 	{

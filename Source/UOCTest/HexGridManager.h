@@ -64,6 +64,16 @@ public:
 
 	// Returns 3D point
 	FVector HexToWorldLocation(Hex Tile) const;
+	
+	static int Length(const Hex Tile);
+
+	static int Distance(const Hex A, const Hex B);
+
+	// returns a vector of Hexes in a desired Range
+	std::vector<Hex> GetHexesInRange(Hex StartingHex, int Range) const;
+	
+	// Returns the number of hexes in a desired Range
+	static int GetHexCountForRange(int Range);
 
 protected:
 	// Called when the game starts or when spawned
@@ -80,9 +90,6 @@ private:
 	static Hex Subtract(const Hex A, const Hex B);
 	static Hex Multiply(const Hex Tile, int Multiplier);
 	static Hex Divide(const Hex Tile, int Divisor);
-
-	static int Length(const Hex Tile);
-	static int Distance(const Hex A, const Hex B);
 
 	// Fields
 	UPROPERTY(EditAnywhere, Category = "Hex Grid")
@@ -111,7 +118,7 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = "Hex Grid | Number of tiles")
     int RightCount = 5;
-    	
+	
 	UPROPERTY(EditAnywhere, Category = "Hex Grid | Number of tiles")
 	int UpCount = -5;
 

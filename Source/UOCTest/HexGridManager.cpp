@@ -177,9 +177,9 @@ Hex AHexGridManager::Divide(const Hex Tile, const int Divisor)
 int AHexGridManager::Length(const Hex Tile)
 {
 	return (
-		FMath::Abs(Tile.Q) +
+		int(FMath::Abs(Tile.Q) +
 		FMath::Abs(Tile.R) +
-		FMath::Abs(Tile.S));
+		FMath::Abs(Tile.S)) / 2);
 }
 
 int AHexGridManager::Distance(const Hex A, const Hex B)
@@ -187,5 +187,26 @@ int AHexGridManager::Distance(const Hex A, const Hex B)
 	return Length(Subtract(A, B));
 }
 
+std::vector<Hex> AHexGridManager::GetHexesInRange(const Hex StartingHex, const int Range) const
+{
+	// declare vector
+	std::vector<Hex> Result;
+	Result.reserve(GetHexCountForRange(Range));
 
+	for (int q = -Range; q <= Range; q++)
+	{
+		const int r1 = std::max(-Range, -q - Range);
+		const int r2 = std::min(Range, -q + Range);
+		for (int r = r1; r <= r2; r++)
+		{
+			Result.push_back(Add(StartingHex, Hex(q, r)));
+		}
+	}
 
+	return Result;
+}
+
+int AHexGridManager::GetHexCountForRange(const int Range)
+{
+	return 3 * Range * (Range + 1);
+}

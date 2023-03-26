@@ -82,7 +82,7 @@ void APlayerCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		EnhancedInputComponent->BindAction(ClickAction, ETriggerEvent::Started, this, &APlayerCamera::OnMouseClicked);
 		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Started, this, &APlayerCamera::OnRightMouseClicked);
 		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Triggered, this, &APlayerCamera::OnRightMouseHold);
-		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Started, this, &APlayerCamera::OnRightMouseReleased);
+		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Completed, this, &APlayerCamera::OnRightMouseReleased);
 	}
 }
 
@@ -141,6 +141,16 @@ void APlayerCamera::OnRightMouseReleased()
 	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	FVector ClickLocation = GetMouseWorldLocation();
 	EndHex = GameMode->GridManager->WorldToHex(ClickLocation);
+
+	std::vector<Hex> Hexes = GameMode->GridManager->GetHexesInRange(StartHex, GameMode->GridManager->Distance(StartHex, EndHex));
+	for (auto &Value : Hexes)
+	{
+		AHexTile* HexTile = GameMode->GridManager->GetTileByHex(Value);
+		if (HexTile)
+		{
+			HexTile->ShuffleMaterials();
+		}
+	}
 }
 
 void APlayerCamera::OnRightMouseHold()
@@ -157,5 +167,6 @@ void APlayerCamera::DrawLine()
 	FVector StartLocation = GameMode->GridManager->HexToWorldLocation(StartHex) + FVector::UpVector * 20.f;
 	FVector EndLocation = GameMode->GridManager->HexToWorldLocation(EndHex) + FVector::UpVector * 20.f;
 	DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::White, false, 0.f, 0, 10.f);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("Event on animation!"));
+	// int Distance = GameMode->GridManager->Distance(StartHex, EndHex);
+	// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("Distance: %d"), Distance)); // int
 }
