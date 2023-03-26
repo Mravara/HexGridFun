@@ -20,4 +20,14 @@ struct UOCTEST_API Hex
 	const int Q;
 	const int R;
 	const int S;
+
+	bool operator==(const Hex Tile) const
+	{
+		return Q == Tile.Q && R == Tile.R && S == Tile.S;
+	}
+
+	bool operator < (const Hex& Tile) const
+	{
+		return std::tie(Q, R, S) < std::tie(Tile.Q, Tile.R, Tile.S);
+	}
 };

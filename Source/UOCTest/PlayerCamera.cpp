@@ -82,7 +82,12 @@ void APlayerCamera::OnMouseClicked()
 	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	FVector ClickLocation = GetClickLocation();
 	Hex Tile = GameMode->GridManager->WorldToHex(ClickLocation);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("TILE_%d_%d_%d"), Tile.Q, Tile.R, Tile.S));
+	AHexTile* HexTile = GameMode->GridManager->GetTileByHex(Tile);
+	if (HexTile)
+	{
+		HexTile->ShuffleMaterials();
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("TILE_%d_%d_%d"), Tile.Q, Tile.R, Tile.S));
+	}
 }
 
 FVector APlayerCamera::GetClickLocation() const

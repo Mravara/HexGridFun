@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <map>
 #include <unordered_set>
 
 #include "CoreMinimal.h"
@@ -50,7 +51,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	Hex WorldToHex(FVector& Location);
+	
 	FractionalHex LocationToFractionalHex(FVector& Location);
+
+	AHexTile* GetTileByHex(Hex& H);
 
 protected:
 	// Called when the game starts or when spawned
@@ -58,8 +62,6 @@ protected:
 
 private:
 	void GenerateGrid();
-	
-	static AHexTile* GetHexTile(FIntVector Coordinates);
 
 	// Rounding from fractal coordinates
 	Hex HexRound(FractionalHex h);
@@ -74,8 +76,6 @@ private:
 	static int Distance(const Hex A, const Hex B);
 
 	Point HexToWorld(const Hex Tile) const;
-
-	inline static TMap<FIntVector, AHexTile*> HexTileMap;
 
 	// Fields
 	UPROPERTY(EditAnywhere, Category = "Hex Grid")
@@ -139,5 +139,7 @@ private:
 	};
 	
 	std::unordered_set<Hex> Map;
+	
+	std::map<Hex, AHexTile*> HexTileMap;
 	
 };

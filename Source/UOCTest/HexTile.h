@@ -35,6 +35,9 @@ public:
 
 	void SetCoordinates(int Q, int R, int S);
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void ShuffleMaterials();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

@@ -60,9 +60,12 @@ void AHexGridManager::GenerateGrid()
 		for (int r = UpCount - QOffset; r <= DownCount - QOffset; r++)
 		{
 			// Map.insert(Hex(q, r, -q-r));
-			Point SpawnLocation = HexToWorld(Hex(q, r, -q-r));
+			Hex hex = Hex(q, r, -q-r);
+			Point SpawnLocation = HexToWorld(hex);
 			AHexTile* Tile = GetWorld()->SpawnActor<AHexTile>(GrassTile, FVector(SpawnLocation.X, SpawnLocation.Y, 0.f), FRotator());
 			Tile->SetActorLabel(FString::Printf(TEXT("Tile_%d_%d_%d"), q, r, -q-r));
+
+			HexTileMap[hex] = Tile;
 		}
 	}
 
@@ -70,6 +73,16 @@ void AHexGridManager::GenerateGrid()
 	{
 		
 	}
+}
+
+AHexTile* AHexGridManager::GetTileByHex(Hex& H)
+{
+	if (HexTileMap.count(H))
+	{
+		return HexTileMap[H];
+	}
+
+	return nullptr;
 }
 
 Point AHexGridManager::HexToWorld(const Hex Tile) const
@@ -147,16 +160,6 @@ Hex AHexGridManager::Multiply(const Hex Tile, const int Multiplier)
 Hex AHexGridManager::Divide(const Hex Tile, const int Divisor)
 {
 	return Hex(Tile.Q / Divisor, Tile.R / Divisor, Tile.S / Divisor);
-}
-
-AHexTile* AHexGridManager::GetHexTile(const FIntVector Coordinates)
-{
-	if (HexTileMap.Contains(Coordinates))
-	{
-		return HexTileMap[Coordinates];
-	}
-
-	return nullptr;
 }
 
 int AHexGridManager::Length(const Hex Tile)
