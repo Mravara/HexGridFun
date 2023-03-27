@@ -29,15 +29,15 @@ APlayerCamera::APlayerCamera() : APawn()
 	// Create a camera boom...
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Boom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->SetUsingAbsoluteRotation(true); // Don't want arm to rotate when character does
+	CameraBoom->SetUsingAbsoluteRotation(false); // (false) Don't want arm to rotate when character does
 	CameraBoom->TargetArmLength = 2000.f;
-	CameraBoom->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
+	CameraBoom->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 
 	// Create a camera...
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera Component"));
 	CameraComponent->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	CameraComponent->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	CameraComponent->bUsePawnControlRotation = false; // (false) Camera does not rotate relative to arm
 
 	// Activate ticking in order to update the cursor every frame.
 	PrimaryActorTick.bCanEverTick = true;
@@ -59,6 +59,18 @@ APlayerCamera::APlayerCamera() : APawn()
     if (const UInputAction* ActionObject = RightClickModifiedInputAction.Object)
     {
         RightClickActionModified = ActionObject;
+    }
+
+    static ConstructorHelpers::FObjectFinder<UInputAction> MoveInputAction(TEXT("/Game/TopDown/Input/Actions/IA_CameraMovement"));
+    if (const UInputAction* ActionObject = MoveInputAction.Object)
+    {
+        MoveAction = ActionObject;
+    }
+
+    static ConstructorHelpers::FObjectFinder<UInputAction> RotateInputAction(TEXT("/Game/TopDown/Input/Actions/IA_CameraRotation"));
+    if (const UInputAction* ActionObject = RotateInputAction.Object)
+    {
+        RotateAction = ActionObject;
     }
 }
 
@@ -96,6 +108,12 @@ void APlayerCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	    EnhancedInputComponent->BindAction(RightClickActionModified, ETriggerEvent::Started, this, &APlayerCamera::OnRightMouseModifiedClicked);
 	    EnhancedInputComponent->BindAction(RightClickActionModified, ETriggerEvent::Triggered, this, &APlayerCamera::OnRightMouseModifiedHold);
 	    EnhancedInputComponent->BindAction(RightClickActionModified, ETriggerEvent::Completed, this, &APlayerCamera::OnRightMouseModifiedReleased);
+
+	    // Camera Movement
+	    EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCamera::MoveCamera);
+
+	    // Camera Rotation
+	    EnhancedInputComponent->BindAction(RotateAction, ETriggerEvent::Triggered, this, &APlayerCamera::RotateCamera);
 	}
 }
 
@@ -140,6 +158,33 @@ FVector APlayerCamera::GetMouseWorldLocation() const
 	}
 
 	return FVector();
+}
+
+void APlayerCamera::MoveCamera(const FInputActionValue& Value)
+{
+    const FVector2d MovementVector = Value.Get<FVector2d>();
+
+    if (Controller)
+    {
+        // get forward rotator
+        const FRotator Rotation = CameraBoom->GetTargetRotation();
+        const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
+
+        // forward movement
+        const FVector Forward = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+        AddMovementInput(Forward, MovementVector.Y);
+
+        // right movement
+        const FVector Right = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+        AddMovementInput(Right, MovementVector.X);
+    }
+}
+
+void APlayerCamera::RotateCamera(const FInputActionValue& Value)
+{
+    const float RotationDirection = Value.Get<float>();
+    FRotator Rotation = FRotator(0.f, RotationDirection, 0.f);
+    CameraBoom->AddWorldRotation(Rotation);
 }
 
 void APlayerCamera::OnRightMouseClicked()

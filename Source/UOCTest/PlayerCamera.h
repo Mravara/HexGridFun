@@ -48,11 +48,17 @@ public:
     void OnRightMouseModifiedReleased();
 
     // Draw debug line
-	void DrawLine(const FColor Color = FColor::White, bool DrawDots = false) const;
+	void DrawLine(const FColor Color = FColor::Blue, bool DrawDots = false) const;
 
     // Used for converting screen to world space coordinates
 	FVector GetMouseWorldLocation() const;
-	
+
+    // Used for camera movement
+    void MoveCamera(const FInputActionValue& Value);
+
+    // Used for camera rotation
+    void RotateCamera(const FInputActionValue& InputActionValue);
+
 
 protected:
 	// Called when the game starts or when spawned
@@ -79,6 +85,12 @@ public:
 
     UPROPERTY(EditAnywhere, Category="Player Camera")
     const UInputAction* RightClickActionModified;
+
+    UPROPERTY(EditAnywhere, Category="Player Camera")
+    const UInputAction* MoveAction;
+
+    UPROPERTY(EditAnywhere, Category="Player Camera")
+    const UInputAction* RotateAction;
 
     // Started drag from this hex
 	Hex StartHex;
