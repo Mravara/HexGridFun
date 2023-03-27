@@ -24,6 +24,16 @@ void AHexGridManager::BeginPlay()
 	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	GameMode->GridManager = this;
 
+    // Populate materials map
+    Materials = decltype(Materials)
+    {
+        { EHexTypes::Invalid, InvalidMaterial },
+        { EHexTypes::Blocked, BlockedMaterial },
+        { EHexTypes::Dirt, DirtMaterial },
+        { EHexTypes::Grass, GrassMaterial },
+        { EHexTypes::Water, WaterMaterial },
+    };
+
 	// init vars
 	TileWidth = OuterTileSize * 2.f;
 
@@ -62,8 +72,10 @@ void AHexGridManager::GenerateGrid()
 			// Map.insert(Hex(q, r, -q-r));
 			Hex hex = Hex(q, r, -q-r);
 			Point SpawnLocation = HexToWorldPoint(hex);
-			AHexTile* Tile = GetWorld()->SpawnActor<AHexTile>(GrassTile, FVector(SpawnLocation.X, SpawnLocation.Y, 0.f), FRotator());
+			float YawRotation = IsFlatTopLayout ? 30.f : 0.f; 
+			AHexTile* Tile = GetWorld()->SpawnActor<AHexTile>(HexTile, FVector(SpawnLocation.X, SpawnLocation.Y, 0.f), FRotator(0.f, YawRotation, 0.f));
 			Tile->SetActorLabel(FString::Printf(TEXT("Tile_%d_%d_%d"), q, r, -q-r));
+		    Tile->Init(Materials[EHexTypes::Grass]);
 
 			HexTileMap[hex] = Tile;
 		}
@@ -209,4 +221,14 @@ std::vector<Hex> AHexGridManager::GetHexesInRange(const Hex StartingHex, const i
 int AHexGridManager::GetHexCountForRange(const int Range)
 {
 	return 3 * Range * (Range + 1);
+}
+
+void AHexGridManager::SelectHexes(const std::vector<Hex>& Hexes)
+{
+	
+}
+
+void AHexGridManager::UnselectHexes(const std::vector<Hex>& Hexes)
+{
+	
 }

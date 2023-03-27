@@ -69,11 +69,15 @@ public:
 
 	static int Distance(const Hex A, const Hex B);
 
-	// returns a vector of Hexes in a desired Range
+	// returns a vector of Hexes in a desired Rangee
 	std::vector<Hex> GetHexesInRange(Hex StartingHex, int Range) const;
 	
 	// Returns the number of hexes in a desired Range
 	static int GetHexCountForRange(int Range);
+	
+	void SelectHexes(const std::vector<Hex>& Hexes);
+	
+	void UnselectHexes(const std::vector<Hex>& Hexes);
 
 protected:
 	// Called when the game starts or when spawned
@@ -93,13 +97,7 @@ private:
 
 	// Fields
 	UPROPERTY(EditAnywhere, Category = "Hex Grid")
-	TSubclassOf<AHexTile> GrassTile;
-
-	UPROPERTY(EditAnywhere, Category = "Hex Grid")
-	TSubclassOf<AHexTile> DirtTile;
-
-	UPROPERTY(EditAnywhere, Category = "Hex Grid")
-	TSubclassOf<AHexTile> WaterTile;
+	TSubclassOf<AHexTile> HexTile;
 
 	UPROPERTY(EditAnywhere, Category = "Hex Grid")
 	FIntVector2 GridSize = FIntVector2(10, 10);
@@ -140,7 +138,22 @@ private:
 	UPROPERTY()
 	float VerticalTileSpacing;
 
-		
+    // Tile materials
+    UPROPERTY(EditAnywhere, Category = "Hex Grid | Materials")
+    UMaterialInstance* InvalidMaterial;
+
+    UPROPERTY(EditAnywhere, Category = "Hex Grid | Materials")
+    UMaterialInstance* BlockedMaterial;
+
+    UPROPERTY(EditAnywhere, Category = "Hex Grid | Materials")
+    UMaterialInstance* DirtMaterial;
+    
+    UPROPERTY(EditAnywhere, Category = "Hex Grid | Materials")
+    UMaterialInstance* GrassMaterial;
+
+    UPROPERTY(EditAnywhere, Category = "Hex Grid | Materials")
+    UMaterialInstance* WaterMaterial;
+    
 	// All directions
 	TArray<FIntVector> DirectionVectors = TArray
 	{
@@ -151,9 +164,10 @@ private:
 		FIntVector(-1, 1, 0),
 		FIntVector(0, 1, -1)
 	};
-	
+    
 	std::unordered_set<Hex> Map;
-	
+    
 	std::map<Hex, AHexTile*> HexTileMap;
-	
+
+    std::map<EHexTypes, UMaterialInstance*> Materials;
 };

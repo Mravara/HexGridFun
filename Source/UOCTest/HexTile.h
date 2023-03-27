@@ -21,22 +21,32 @@ public:
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+    void Init(UMaterialInstance* Material);
 
-	// Coordinates
-	FORCEINLINE int Q() const { return Coordinates.X; }
-	FORCEINLINE int R() const { return Coordinates.Y; }
-	FORCEINLINE int S() const { return Coordinates.Z; }
+    // Marks the hex tile as selected
+	void Select(UMaterialInstance* MaterialInstance) const;
 
-	// operators
+	// Unselects the tile
+	void Unselect() const;
+
+	void SetCoordinates(int Q, int R, int S);
+
+		// operators
 	FORCEINLINE bool operator == (const AHexTile* Other) const
 	{
 		return Q() == Other->Q() && R() == Other->R() && S() == Other->S();
 	}
 
-	void SetCoordinates(int Q, int R, int S);
-
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShuffleMaterials();
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="Mesh")
+	UStaticMeshComponent* MeshComponent;
+
+	// Coordinates
+	FORCEINLINE int Q() const { return Coordinates.X; }
+	FORCEINLINE int R() const { return Coordinates.Y; }
+	FORCEINLINE int S() const { return Coordinates.Z; }
 
 protected:
 	// Called when the game starts or when spawned
@@ -45,5 +55,8 @@ protected:
 private:
 	UPROPERTY()
 	FIntVector Coordinates; // bottom left, top, bottom right
+
+	UPROPERTY()
+	UMaterialInstance* DefaultMaterial;
 
 };
