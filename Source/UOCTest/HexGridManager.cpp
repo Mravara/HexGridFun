@@ -142,6 +142,34 @@ FractionalHex AHexGridManager::LocationToFractionalHex(const FVector& Location) 
 	return FractionalHex(q, r, -q - r);
 }
 
+FractionalHex AHexGridManager::LerpHex(Hex a, Hex b, double t) {
+    return FractionalHex(PreciseLerp(a.Q, b.Q, t),
+                         PreciseLerp(a.R, b.R, t),
+                         PreciseLerp(a.S, b.S, t));
+}
+
+float AHexGridManager::PreciseLerp(double a, double b, double t)
+{
+    return a * (1-t) + b * t;
+    /* better for floating point precision than
+       a + (b - a) * t, which is what I usually write */
+}
+
+std::vector<Hex> AHexGridManager::GetHexLine(const Hex& StartHex, const Hex& EndHex)
+{
+    const int HexDistance = Distance(StartHex, EndHex);
+    
+    std::vector<Hex> Results = {};
+    double Step = 1.0 / FMath::Max(HexDistance, 1);
+
+    for (int i = 0; i <= HexDistance; i++)
+    {
+        Results.push_back(HexRound(LerpHex(StartHex, EndHex, Step * i)));
+    }
+
+    return Results;
+}
+
 Hex AHexGridManager::HexRound(const FractionalHex h) const
 {
 	int q = int(round(h.Q));

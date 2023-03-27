@@ -31,7 +31,7 @@ APlayerCamera::APlayerCamera() : APawn()
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->SetUsingAbsoluteRotation(true); // Don't want arm to rotate when character does
 	CameraBoom->TargetArmLength = 2000.f;
-	CameraBoom->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));
+	CameraBoom->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 
 	// Create a camera...
@@ -54,6 +54,12 @@ APlayerCamera::APlayerCamera() : APawn()
 	{
 		RightClickAction = ActionObject;
 	}
+
+    static ConstructorHelpers::FObjectFinder<UInputAction> RightClickModifiedInputAction(TEXT("/Game/TopDown/Input/Actions/IA_RightClickModified"));
+    if (const UInputAction* ActionObject = RightClickModifiedInputAction.Object)
+    {
+        RightClickActionModified = ActionObject;
+    }
 }
 
 // Called when the game starts or when spawned
@@ -80,9 +86,16 @@ void APlayerCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	{
 		// Setup mouse input events
 		EnhancedInputComponent->BindAction(ClickAction, ETriggerEvent::Started, this, &APlayerCamera::OnMouseClicked);
-		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Started, this, &APlayerCamera::OnRightMouseClicked);
+
+	    // Right Click
+	    EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Started, this, &APlayerCamera::OnRightMouseClicked);
 		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Triggered, this, &APlayerCamera::OnRightMouseHold);
 		EnhancedInputComponent->BindAction(RightClickAction, ETriggerEvent::Completed, this, &APlayerCamera::OnRightMouseReleased);
+
+	    // Right Click Modified (Shift)
+	    EnhancedInputComponent->BindAction(RightClickActionModified, ETriggerEvent::Started, this, &APlayerCamera::OnRightMouseModifiedClicked);
+	    EnhancedInputComponent->BindAction(RightClickActionModified, ETriggerEvent::Triggered, this, &APlayerCamera::OnRightMouseModifiedHold);
+	    EnhancedInputComponent->BindAction(RightClickActionModified, ETriggerEvent::Completed, this, &APlayerCamera::OnRightMouseModifiedReleased);
 	}
 }
 
@@ -139,18 +152,9 @@ void APlayerCamera::OnRightMouseClicked()
 void APlayerCamera::OnRightMouseReleased()
 {
 	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-    
-    if (StartHex == EndHex)
-    {
-        GameMode->GridManager->UnselectHexes();
-        return;
-    }
-    
-	FVector ClickLocation = GetMouseWorldLocation();
-	EndHex = GameMode->GridManager->WorldToHex(ClickLocation);
 
-	std::vector<Hex> Hexes = GameMode->GridManager->GetHexesInRange(StartHex, GameMode->GridManager->Distance(StartHex, EndHex));
-    GameMode->GridManager->SelectHexes(Hexes);
+    GameMode->GridManager->UnselectHexes();
+
 	
 	// for (auto &Value : Hexes)
 	// {
@@ -164,18 +168,76 @@ void APlayerCamera::OnRightMouseReleased()
 
 void APlayerCamera::OnRightMouseHold()
 {
-	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	FVector ClickLocation = GetMouseWorldLocation();
+    const AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    const FVector ClickLocation = GetMouseWorldLocation();
 	EndHex = GameMode->GridManager->WorldToHex(ClickLocation);
+
+    // Unselect hexes
+    GameMode->GridManager->UnselectHexes();
+
+    // Select Line
+    std::vector<Hex> Hexes = GameMode->GridManager->GetHexesInRange(StartHex, GameMode->GridManager->Distance(StartHex, EndHex));
+    GameMode->GridManager->SelectHexes(Hexes);
+    
 	DrawLine();
 }
 
-void APlayerCamera::DrawLine()
+void APlayerCamera::OnRightMouseModifiedClicked()
 {
-	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	FVector StartLocation = GameMode->GridManager->HexToWorldLocation(StartHex) + FVector::UpVector * 20.f;
-	FVector EndLocation = GameMode->GridManager->HexToWorldLocation(EndHex) + FVector::UpVector * 20.f;
-	DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::White, false, 0.f, 0, 10.f);
+    const AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    const FVector ClickLocation = GetMouseWorldLocation();
+    StartHex = GameMode->GridManager->WorldToHex(ClickLocation);
+}
+
+void APlayerCamera::OnRightMouseModifiedHold()
+{
+    const AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    const FVector ClickLocation = GetMouseWorldLocation();
+    EndHex = GameMode->GridManager->WorldToHex(ClickLocation);
+
+    // Unselect hexes
+    GameMode->GridManager->UnselectHexes();
+
+    // Select Line
+    std::vector<Hex> Hexes = GameMode->GridManager->GetHexLine(StartHex, EndHex);
+    GameMode->GridManager->SelectHexes(Hexes);
+
+    // Draw line
+    DrawLine(FColor::Red, true);
+}
+
+void APlayerCamera::OnRightMouseModifiedReleased()
+{
+    const AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    const FVector ClickLocation = GetMouseWorldLocation();
+    StartHex = GameMode->GridManager->WorldToHex(ClickLocation);
+
+    // Unselect hexes
+    GameMode->GridManager->UnselectHexes();
+}
+
+void APlayerCamera::DrawLine(const FColor Color, bool DrawDots) const
+{
+    const AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    const FVector StartLocation = GameMode->GridManager->HexToWorldLocation(StartHex) + FVector::UpVector * 20.f;
+    const FVector EndLocation = GameMode->GridManager->HexToWorldLocation(EndHex) + FVector::UpVector * 20.f;
+	DrawDebugLine(GetWorld(), StartLocation, EndLocation, Color, false, 0.f, 0, 10.f);
+
+    if (DrawDots)
+    {
+        float Distance = (EndLocation - StartLocation).Size();
+        const int HexDistance = GameMode->GridManager->Distance(StartHex, EndHex);
+        float Step = Distance / HexDistance;
+        FVector Direction = (EndLocation - StartLocation).GetSafeNormal();
+
+        for (int i = 0; i <= HexDistance; i++)
+        {
+            FVector CenterLocation = StartLocation + Direction * Step * i;
+            FTransform Transform(FRotator(90.f, 0.f, 0.f), CenterLocation);
+            DrawDebugCircle(GetWorld(), Transform.ToMatrixWithScale(), 15.f, 32, Color, false, 0.f, 0);
+        }
+    }
 	// int Distance = GameMode->GridManager->Distance(StartHex, EndHex);
 	// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("Distance: %d"), Distance)); // int
 }
+

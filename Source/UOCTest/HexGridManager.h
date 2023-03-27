@@ -55,8 +55,11 @@ public:
 
 	// World location to fractional Hex -> used to find Hex
 	FractionalHex LocationToFractionalHex(const FVector& Location) const;
+    FractionalHex LerpHex(Hex a, Hex b, double t);
+    static float PreciseLerp(double a, double b, double t);
+    std::vector<Hex> GetHexLine(const Hex& StartHex, const Hex& EndHex);
 
-	// Returns associated blueprint to Hex 
+    // Returns associated blueprint to Hex 
 	AHexTile* GetTileByHex(Hex& H);
 
 	// Returns 2D point

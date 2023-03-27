@@ -38,10 +38,19 @@ public:
 	// When Right Mouse Button is held
 	void OnRightMouseHold();
 
-	// Draw debug line
-	void DrawLine();
+    // When Shift + Right Mouse Button is pressed
+    void OnRightMouseModifiedClicked();
 
-	// Used for converting screen to world space coordinates
+    // When Shift + Right Mouse Button is held
+    void OnRightMouseModifiedHold();
+
+    // When Shift + Right Mouse Button is released
+    void OnRightMouseModifiedReleased();
+
+    // Draw debug line
+	void DrawLine(const FColor Color = FColor::White, bool DrawDots = false) const;
+
+    // Used for converting screen to world space coordinates
 	FVector GetMouseWorldLocation() const;
 	
 
@@ -68,6 +77,12 @@ public:
 	UPROPERTY(EditAnywhere, Category="Player Camera")
 	const UInputAction* RightClickAction;
 
+    UPROPERTY(EditAnywhere, Category="Player Camera")
+    const UInputAction* RightClickActionModified;
+
+    // Started drag from this hex
 	Hex StartHex;
+
+    // Ended drag on this hex
 	Hex EndHex;
 };
