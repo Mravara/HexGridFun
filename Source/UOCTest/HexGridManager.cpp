@@ -121,7 +121,7 @@ FVector AHexGridManager::HexToWorldLocation(const Hex Tile) const
 	return FVector(Up, Right, 0.f);
 }
 
-Hex AHexGridManager::WorldToHex(FVector& Location)
+Hex AHexGridManager::WorldToHex(const FVector& Location) const
 {
 	// const float Right = Tile.Q * HorizontalTileSpacing; // 150
 	// const float Up = -VerticalTileSpacing * Tile.Q + Tile.R * -VerticalTileSpacing * 2.f; // 86.6
@@ -134,7 +134,7 @@ Hex AHexGridManager::WorldToHex(FVector& Location)
 	return HexRound(LocationToFractionalHex(Location));
 }
 
-FractionalHex AHexGridManager::LocationToFractionalHex(FVector& Location)
+FractionalHex AHexGridManager::LocationToFractionalHex(const FVector& Location) const
 {
 	Point pt = Point(Location.Y / OuterTileSize, Location.X / OuterTileSize);
 	double q = (2.0 / 3.0) * pt.X;
@@ -142,7 +142,7 @@ FractionalHex AHexGridManager::LocationToFractionalHex(FVector& Location)
 	return FractionalHex(q, r, -q - r);
 }
 
-Hex AHexGridManager::HexRound(FractionalHex h)
+Hex AHexGridManager::HexRound(const FractionalHex h) const
 {
 	int q = int(round(h.Q));
 	int r = int(round(h.R));
@@ -225,10 +225,27 @@ int AHexGridManager::GetHexCountForRange(const int Range)
 
 void AHexGridManager::SelectHexes(const std::vector<Hex>& Hexes)
 {
-	
+    for (Hex Hex : Hexes)
+    {
+        const AHexTile* Tile = GetTileByHex(Hex);
+        if (Tile)
+        {
+            Tile->Select(SelectedMaterial);
+            SelectedHexes.push_back(Hex);
+        }
+    }
 }
 
-void AHexGridManager::UnselectHexes(const std::vector<Hex>& Hexes)
+void AHexGridManager::UnselectHexes()
 {
-	
+    for (Hex Hex : SelectedHexes)
+    {
+        const AHexTile* Tile = GetTileByHex(Hex);
+        if (Tile)
+        {
+            Tile->Unselect();
+        }
+    }
+
+    SelectedHexes.clear();
 }

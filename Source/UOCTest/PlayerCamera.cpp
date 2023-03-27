@@ -139,18 +139,27 @@ void APlayerCamera::OnRightMouseClicked()
 void APlayerCamera::OnRightMouseReleased()
 {
 	AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    
+    if (StartHex == EndHex)
+    {
+        GameMode->GridManager->UnselectHexes();
+        return;
+    }
+    
 	FVector ClickLocation = GetMouseWorldLocation();
 	EndHex = GameMode->GridManager->WorldToHex(ClickLocation);
 
 	std::vector<Hex> Hexes = GameMode->GridManager->GetHexesInRange(StartHex, GameMode->GridManager->Distance(StartHex, EndHex));
-	for (auto &Value : Hexes)
-	{
-		AHexTile* HexTile = GameMode->GridManager->GetTileByHex(Value);
-		if (HexTile)
-		{
-			HexTile->ShuffleMaterials();
-		}
-	}
+    GameMode->GridManager->SelectHexes(Hexes);
+	
+	// for (auto &Value : Hexes)
+	// {
+	// 	AHexTile* HexTile = GameMode->GridManager->GetTileByHex(Value);
+	// 	if (HexTile)
+	// 	{
+	// 		HexTile->ShuffleMaterials();
+	// 	}
+	// }
 }
 
 void APlayerCamera::OnRightMouseHold()

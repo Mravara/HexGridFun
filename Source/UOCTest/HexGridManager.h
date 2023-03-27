@@ -51,10 +51,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	// World coordinate to Hex
-	Hex WorldToHex(FVector& Location);
+	Hex WorldToHex(const FVector& Location) const;
 
 	// World location to fractional Hex -> used to find Hex
-	FractionalHex LocationToFractionalHex(FVector& Location);
+	FractionalHex LocationToFractionalHex(const FVector& Location) const;
 
 	// Returns associated blueprint to Hex 
 	AHexTile* GetTileByHex(Hex& H);
@@ -77,7 +77,7 @@ public:
 	
 	void SelectHexes(const std::vector<Hex>& Hexes);
 	
-	void UnselectHexes(const std::vector<Hex>& Hexes);
+	void UnselectHexes();
 
 protected:
 	// Called when the game starts or when spawned
@@ -87,7 +87,7 @@ private:
 	void GenerateGrid();
 
 	// Rounding from fractal coordinates
-	Hex HexRound(FractionalHex h);
+	Hex HexRound(FractionalHex h) const;
 	
 	// Arithmetics
 	static Hex Add(const Hex A, const Hex B);
@@ -153,6 +153,9 @@ private:
 
     UPROPERTY(EditAnywhere, Category = "Hex Grid | Materials")
     UMaterialInstance* WaterMaterial;
+
+    UPROPERTY(EditAnywhere, Category = "Hex Grid | Materials")
+    UMaterialInstance* SelectedMaterial;
     
 	// All directions
 	TArray<FIntVector> DirectionVectors = TArray
@@ -170,4 +173,6 @@ private:
 	std::map<Hex, AHexTile*> HexTileMap;
 
     std::map<EHexTypes, UMaterialInstance*> Materials;
+
+    std::vector<Hex> SelectedHexes;
 };
