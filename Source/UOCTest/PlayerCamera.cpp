@@ -28,7 +28,7 @@ APlayerCamera::APlayerCamera() : APawn()
 	// Create a camera boom...
 	RootComponent = CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Boom"));
 	CameraBoom->SetUsingAbsoluteRotation(false); // (false) Don't want arm to rotate when character does
-	CameraBoom->TargetArmLength = 2000.f;
+	CameraBoom->TargetArmLength = DefaultZoom;
 	CameraBoom->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 
@@ -95,7 +95,8 @@ APlayerCamera::APlayerCamera() : APawn()
 void APlayerCamera::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+    TargetZoom = CameraBoom->TargetArmLength;
 }
 
 // Called every frame
@@ -264,7 +265,6 @@ void APlayerCamera::StartDragCamera(const FInputActionValue& Value)
     OldScreenMousePosition = StartMouseScreenPosition;
     OldWorldMousePosition = GetMouseWorldLocation(OldScreenMousePosition);
     StartingCameraDragPosition = GetActorLocation();
-    // PlayerController->SetShowMouseCursor(false);
     IsDraggingCamera = true;
 }
 
@@ -281,18 +281,12 @@ void APlayerCamera::UpdateCameraDrag(const FInputActionValue& Value)
 
     SetActorLocation(StartingCameraDragPosition + Offset);
 
-    StartingCameraDragPosition = GetActorLocation();
-
-    
-    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("Offset: %f, %f, %f"), Offset.X, Offset.Y, Offset.Z));
+    StartingCameraDragPosition = GetActorLocation(); // save new position
 }
 
 void APlayerCamera::EndDragCamera(const FInputActionValue& Value)
 {
     IsDraggingCamera = false;
-    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-    PlayerController->SetShowMouseCursor(true);
-    // PlayerController->SetMouseLocation(StartDragMousePosition.X, StartDragMousePosition.Y); // probably remove this later
 }
 
 void APlayerCamera::OnRightMouseClicked()

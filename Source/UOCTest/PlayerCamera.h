@@ -150,7 +150,7 @@ private:
     bool IsDraggingCamera;
 
     UPROPERTY(EditAnywhere, Category = "Camera | Zoom")
-    float ZoomDuration = 1.f;
+    float ZoomDuration = 0.5f;
 
     UPROPERTY(EditAnywhere, Category = "Camera | Zoom")
     float DefaultZoom = 2000.f;
