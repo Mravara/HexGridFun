@@ -22,14 +22,14 @@ public:
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
+    
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	// When Left Mouse Button is pressed
 	void OnMouseClicked();
 
-	// When Right Mouse Button is pressed
+    // When Right Mouse Button is pressed
 	void OnRightMouseClicked();
 
 	// When Right Mouse Button is released
@@ -52,49 +52,128 @@ public:
 
     // Used for converting screen to world space coordinates
 	FVector GetMouseWorldLocation() const;
+    
+    FVector GetMouseWorldLocation(FVector2D& MousePosition) const;
 
     // Used for camera movement
     void MoveCamera(const FInputActionValue& Value);
 
     // Used for camera rotation
-    void RotateCamera(const FInputActionValue& InputActionValue);
+    void RotateCamera(const FInputActionValue& Value);
+
+    // Used for camera zoom in and out
+    void ZoomCamera(const FInputActionValue& Value);
+
+    // Called every tick while updating camera zoom
+    void UpdateCameraZoom(const float DeltaTime);
+
+    // Called when drag camera is started
+    void StartDragCamera(const FInputActionValue& Value);
+
+    // Called each tick while drag camera is active
+    void UpdateCameraDrag(const FInputActionValue& Value);
+    
+    // Called when camera drag ends
+    void EndDragCamera(const FInputActionValue& Value);
+
+    // Started drag from this hex
+    Hex StartHex;
+
+    // Ended drag on this hex
+    Hex EndHex;
 
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:
-	UPROPERTY()
+private:
+	UPROPERTY(EditAnywhere)
 	TObjectPtr<UCameraComponent> CameraComponent;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	TObjectPtr<USpringArmComponent> CameraBoom;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	TObjectPtr<UFloatingPawnMovement> FloatingPawnMovement;
 
 	UPROPERTY()
 	TEnumAsByte<ECollisionChannel> TraceChannel;
 
-	UPROPERTY(EditAnywhere, Category="Player Camera")
+	UPROPERTY(EditAnywhere, Category="Camera | Actions")
 	const UInputAction* ClickAction;
 
-	UPROPERTY(EditAnywhere, Category="Player Camera")
+	UPROPERTY(EditAnywhere, Category="Camera | Actions")
 	const UInputAction* RightClickAction;
 
-    UPROPERTY(EditAnywhere, Category="Player Camera")
+	UPROPERTY(EditAnywhere, Category="Camera | Actions")
     const UInputAction* RightClickActionModified;
 
-    UPROPERTY(EditAnywhere, Category="Player Camera")
+	UPROPERTY(EditAnywhere, Category="Camera | Actions")
     const UInputAction* MoveAction;
 
-    UPROPERTY(EditAnywhere, Category="Player Camera")
+	UPROPERTY(EditAnywhere, Category="Camera | Actions")
     const UInputAction* RotateAction;
 
-    // Started drag from this hex
-	Hex StartHex;
+	UPROPERTY(EditAnywhere, Category="Camera | Actions")
+    const UInputAction* ZoomAction;
 
-    // Ended drag on this hex
-	Hex EndHex;
+    UPROPERTY(EditAnywhere, Category="Camera | Actions")
+    const UInputAction* DragAction;
+    
+    // Zoom vars
+    UPROPERTY()
+    float StartingZoom;
+
+    UPROPERTY()
+    float TargetZoom;
+
+    UPROPERTY()
+    float CurrentZoomDuration;
+
+    UPROPERTY()
+    bool IsUpdatingCameraZoom;
+
+    UPROPERTY()
+    FVector2D StartMouseScreenPosition;
+
+    UPROPERTY()
+    FVector2D OldScreenMousePosition;
+
+    UPROPERTY()
+    FVector OldWorldMousePosition;
+
+    UPROPERTY()
+    FVector StartingCameraDragPosition;
+
+    UPROPERTY()
+    bool IsDraggingCamera;
+
+    UPROPERTY(EditAnywhere, Category = "Camera | Zoom")
+    float ZoomDuration = 1.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera | Zoom")
+    float DefaultZoom = 2000.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera | Zoom")
+    float MinZoom = 1000.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera | Zoom")
+    float MaxZoom = 3000.f;
+	
+    UPROPERTY(EditAnywhere, Category = "Camera | Zoom")
+    float ZoomStep = 500.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera | Zoom")
+    UCurveFloat* ZoomCurve;
+
+    UPROPERTY(EditAnywhere, Category = "Camera | Movement")
+    float MoveSpeed = 1.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera | Movement")
+    float RotationSpeed = 1.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera | Drag")
+    float DragSpeed = 100.f;
+    
 };

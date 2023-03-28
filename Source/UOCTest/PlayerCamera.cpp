@@ -17,7 +17,6 @@ APlayerCamera::APlayerCamera() : APawn()
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	FloatingPawnMovement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Floating Movement Component"));
 	AddOwnedComponent(FloatingPawnMovement);
 
@@ -27,8 +26,7 @@ APlayerCamera::APlayerCamera() : APawn()
 	bUseControllerRotationRoll = false;
 
 	// Create a camera boom...
-	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Boom"));
-	CameraBoom->SetupAttachment(RootComponent);
+	RootComponent = CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Boom"));
 	CameraBoom->SetUsingAbsoluteRotation(false); // (false) Don't want arm to rotate when character does
 	CameraBoom->TargetArmLength = 2000.f;
 	CameraBoom->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));
@@ -43,34 +41,53 @@ APlayerCamera::APlayerCamera() : APawn()
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 
+    // Left Click Action
 	static ConstructorHelpers::FObjectFinder<UInputAction> ClickInputAction(TEXT("/Game/TopDown/Input/Actions/IA_SetDestination_Click"));
     if (const UInputAction* ActionObject = ClickInputAction.Object)
 	{
 		ClickAction = ActionObject;
 	}
 
+    // Right Click Action
 	static ConstructorHelpers::FObjectFinder<UInputAction> RightClickInputAction(TEXT("/Game/TopDown/Input/Actions/IA_RightClick"));
 	if (const UInputAction* ActionObject = RightClickInputAction.Object)
 	{
 		RightClickAction = ActionObject;
 	}
 
+    // Right Click Action Modifier (Shift)
     static ConstructorHelpers::FObjectFinder<UInputAction> RightClickModifiedInputAction(TEXT("/Game/TopDown/Input/Actions/IA_RightClickModified"));
     if (const UInputAction* ActionObject = RightClickModifiedInputAction.Object)
     {
         RightClickActionModified = ActionObject;
     }
 
+    // Camera Move Action
     static ConstructorHelpers::FObjectFinder<UInputAction> MoveInputAction(TEXT("/Game/TopDown/Input/Actions/IA_CameraMovement"));
     if (const UInputAction* ActionObject = MoveInputAction.Object)
     {
         MoveAction = ActionObject;
     }
 
+    // Camera Rotate Action
     static ConstructorHelpers::FObjectFinder<UInputAction> RotateInputAction(TEXT("/Game/TopDown/Input/Actions/IA_CameraRotation"));
     if (const UInputAction* ActionObject = RotateInputAction.Object)
     {
         RotateAction = ActionObject;
+    }
+
+    // Camera Zoom Action
+    static ConstructorHelpers::FObjectFinder<UInputAction> ZoomInputAction(TEXT("/Game/TopDown/Input/Actions/IA_CameraZoom"));
+    if (const UInputAction* ActionObject = ZoomInputAction.Object)
+    {
+        ZoomAction = ActionObject;
+    }
+
+    // Camera Drag Action
+    static ConstructorHelpers::FObjectFinder<UInputAction> DragInputAction(TEXT("/Game/TopDown/Input/Actions/IA_DragAction"));
+    if (const UInputAction* ActionObject = DragInputAction.Object)
+    {
+        DragAction = ActionObject;
     }
 }
 
@@ -86,6 +103,10 @@ void APlayerCamera::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+    if (IsUpdatingCameraZoom)
+    {
+        UpdateCameraZoom(DeltaTime);
+    }
 }
 
 // Called to bind functionality to input
@@ -114,6 +135,14 @@ void APlayerCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 	    // Camera Rotation
 	    EnhancedInputComponent->BindAction(RotateAction, ETriggerEvent::Triggered, this, &APlayerCamera::RotateCamera);
+
+	    // Camera Zoom
+	    EnhancedInputComponent->BindAction(ZoomAction, ETriggerEvent::Triggered, this, &APlayerCamera::ZoomCamera);
+
+	    // Camera Drag
+	    EnhancedInputComponent->BindAction(DragAction, ETriggerEvent::Started, this, &APlayerCamera::StartDragCamera);
+	    EnhancedInputComponent->BindAction(DragAction, ETriggerEvent::Triggered, this, &APlayerCamera::UpdateCameraDrag);
+	    EnhancedInputComponent->BindAction(DragAction, ETriggerEvent::Completed, this, &APlayerCamera::EndDragCamera);
 	}
 }
 
@@ -126,7 +155,6 @@ void APlayerCamera::OnMouseClicked()
 	if (HexTile)
 	{
 		HexTile->ShuffleMaterials();
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("TILE_%d_%d_%d"), Tile.Q, Tile.R, Tile.S));
 	}
 }
 
@@ -137,27 +165,35 @@ FVector APlayerCamera::GetMouseWorldLocation() const
 
 	if (LocalPlayer->ViewportClient->GetMousePosition(MousePosition))
 	{
-		FVector StartLocation = CameraComponent->GetComponentLocation();
-		FVector WorldOrigin;
-		FVector WorldDirection;
-		APlayerController* PlayerController = Cast<APlayerController>(GetController());
-		if (UGameplayStatics::DeprojectScreenToWorld(PlayerController, MousePosition, WorldOrigin, WorldDirection))
-		{
-			FHitResult Hit;
-			bool Success = GetWorld()->LineTraceSingleByChannel(
-				Hit,
-				WorldOrigin,
-				StartLocation + WorldDirection * 20000.0f,
-				TraceChannel);
-
-			if (Success)
-			{
-				return Hit.ImpactPoint;
-			}
-		}
+	    return GetMouseWorldLocation(MousePosition);
 	}
 
 	return FVector();
+}
+
+
+FVector APlayerCamera::GetMouseWorldLocation(FVector2D& MousePosition) const
+{
+    FVector StartLocation = CameraComponent->GetComponentLocation();
+    FVector WorldOrigin;
+    FVector WorldDirection;
+    APlayerController* PlayerController = Cast<APlayerController>(GetController());
+    if (UGameplayStatics::DeprojectScreenToWorld(PlayerController, MousePosition, WorldOrigin, WorldDirection))
+    {
+        FHitResult Hit;
+        bool Success = GetWorld()->LineTraceSingleByChannel(
+            Hit,
+            WorldOrigin,
+            StartLocation + WorldDirection * 20000.0f,
+            TraceChannel);
+
+        if (Success)
+        {
+            return Hit.ImpactPoint;
+        }
+    }
+
+    return FVector();
 }
 
 void APlayerCamera::MoveCamera(const FInputActionValue& Value)
@@ -172,19 +208,91 @@ void APlayerCamera::MoveCamera(const FInputActionValue& Value)
 
         // forward movement
         const FVector Forward = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-        AddMovementInput(Forward, MovementVector.Y);
+        AddMovementInput(Forward, MovementVector.Y * MoveSpeed);
 
         // right movement
         const FVector Right = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-        AddMovementInput(Right, MovementVector.X);
+        AddMovementInput(Right, MovementVector.X * MoveSpeed);
     }
 }
 
 void APlayerCamera::RotateCamera(const FInputActionValue& Value)
 {
     const float RotationDirection = Value.Get<float>();
-    FRotator Rotation = FRotator(0.f, RotationDirection, 0.f);
+    const FRotator Rotation = FRotator(0.f, RotationDirection * RotationSpeed, 0.f);
     CameraBoom->AddWorldRotation(Rotation);
+}
+
+void APlayerCamera::ZoomCamera(const FInputActionValue& Value)
+{
+    const float Direction = Value.Get<float>();
+
+    StartingZoom = CameraBoom->TargetArmLength;
+	
+    TargetZoom = FMathf::Clamp(TargetZoom + ZoomStep * Direction, MinZoom, MaxZoom);
+
+    CurrentZoomDuration = 0.f;
+	
+    IsUpdatingCameraZoom = true;
+}
+
+void APlayerCamera::UpdateCameraZoom(const float DeltaTime)
+{
+    const float NormalizedTime = CurrentZoomDuration / ZoomDuration;
+
+    if (NormalizedTime < 1.f)
+    {
+        const float CurvedTime = ZoomCurve->GetFloatValue(NormalizedTime);
+
+        const float NewZoom = FMath::Lerp(StartingZoom, TargetZoom, CurvedTime);
+
+        CameraBoom->TargetArmLength = NewZoom;
+		
+        CurrentZoomDuration += DeltaTime;
+    }
+    else
+    {
+        CameraBoom->TargetArmLength = TargetZoom;
+        IsUpdatingCameraZoom = false;
+    }
+}
+
+void APlayerCamera::StartDragCamera(const FInputActionValue& Value)
+{
+    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+    PlayerController->GetLocalPlayer()->ViewportClient->GetMousePosition(StartMouseScreenPosition);
+    OldScreenMousePosition = StartMouseScreenPosition;
+    OldWorldMousePosition = GetMouseWorldLocation(OldScreenMousePosition);
+    StartingCameraDragPosition = GetActorLocation();
+    // PlayerController->SetShowMouseCursor(false);
+    IsDraggingCamera = true;
+}
+
+void APlayerCamera::UpdateCameraDrag(const FInputActionValue& Value)
+{
+    FVector2d CurrentScreenMousePosition;
+    const APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+    PlayerController->GetLocalPlayer()->ViewportClient->GetMousePosition(CurrentScreenMousePosition);
+
+    FVector CurrentWorldMousePosition = GetMouseWorldLocation(CurrentScreenMousePosition);
+
+    FVector Offset = OldWorldMousePosition - CurrentWorldMousePosition;
+    Offset.Z = 0.f;
+
+    SetActorLocation(StartingCameraDragPosition + Offset);
+
+    StartingCameraDragPosition = GetActorLocation();
+
+    
+    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("Offset: %f, %f, %f"), Offset.X, Offset.Y, Offset.Z));
+}
+
+void APlayerCamera::EndDragCamera(const FInputActionValue& Value)
+{
+    IsDraggingCamera = false;
+    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+    PlayerController->SetShowMouseCursor(true);
+    // PlayerController->SetMouseLocation(StartDragMousePosition.X, StartDragMousePosition.Y); // probably remove this later
 }
 
 void APlayerCamera::OnRightMouseClicked()

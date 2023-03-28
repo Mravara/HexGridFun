@@ -13,13 +13,13 @@ AUOCTestGameMode::AUOCTestGameMode()
 	PlayerControllerClass = AUOCTestPlayerController::StaticClass();
 
 	// set default pawn class to our Blueprinted character
-	// static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/TopDown/Blueprints/BP_TopDownCharacter"));
-	// if (PlayerPawnBPClass.Class != nullptr)
-	// {
-	// 	DefaultPawnClass = PlayerPawnBPClass.Class;
-	// }
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/Binx/Blueprints/BP_PlayerCamera"));
+	if (PlayerPawnBPClass.Class != nullptr)
+	{
+		DefaultPawnClass = PlayerPawnBPClass.Class;
+	}
 
-	DefaultPawnClass = APlayerCamera::StaticClass();
+	// DefaultPawnClass = APlayerCamera::StaticClass();
 	
 	// set default controller to our Blueprinted controller
 	static ConstructorHelpers::FClassFinder<APlayerController> PlayerControllerBPClass(TEXT("/Game/TopDown/Blueprints/BP_TopDownPlayerController"));
