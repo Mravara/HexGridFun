@@ -63,27 +63,39 @@ void AHexGridManager::GenerateGrid()
 	UE_LOG(LogTemp, Warning, TEXT("TileHeight %f"), TileHeight);
 	UE_LOG(LogTemp, Warning, TEXT("OuterTileSize %f"), OuterTileSize);
 	UE_LOG(LogTemp, Warning, TEXT("InnerTileSize %f"), InnerTileSize);
-	
+
+    // Generate grid and add the HexTileMap
 	for (int q = LeftCount; q <= RightCount; q++)
 	{
 		const int QOffset = floor(q/2.f);
 		for (int r = UpCount - QOffset; r <= DownCount - QOffset; r++)
 		{
-			// Map.insert(Hex(q, r, -q-r));
-			Hex hex = Hex(q, r, -q-r);
+		    // Create hex
+			Hex hex = Hex(q, r, -q-r, EHexTypes::Grass);
+		    
+		    // Add neighbors
+	        for (int i = 0; i < DirectionVectors.Num(); ++i)
+	        {
+	            FIntVector Direction = DirectionVectors[i];
+		        Hex Neighbor = Hex(hex.Q + Direction.X, hex.R + Direction.Y, hex.S + Direction.Z);
+		        if (HexTileMap.count(Neighbor))
+		        {
+		            hex.Neighbors[i] = Neighbor;
+		        }
+		    }
+
+		    // Get world location and rotation
 			Point SpawnLocation = HexToWorldPoint(hex);
-			float YawRotation = IsFlatTopLayout ? 30.f : 0.f; 
-			AHexTile* Tile = GetWorld()->SpawnActor<AHexTile>(HexTile, FVector(SpawnLocation.X, SpawnLocation.Y, 0.f), FRotator(0.f, YawRotation, 0.f));
+			float YawRotation = IsFlatTopLayout ? 30.f : 0.f;
+
+		    // Instantiate blueprint on location
+		    AHexTile* Tile = GetWorld()->SpawnActor<AHexTile>(HexTile, FVector(SpawnLocation.X, SpawnLocation.Y, 0.f), FRotator(0.f, YawRotation, 0.f));
 			Tile->SetActorLabel(FString::Printf(TEXT("Tile_%d_%d_%d"), q, r, -q-r));
 		    Tile->Init(Materials[EHexTypes::Grass]);
 
+		    // Save to map for future use
 			HexTileMap[hex] = Tile;
 		}
-	}
-
-	for (Hex hex : Map)
-	{
-		
 	}
 }
 
@@ -168,6 +180,12 @@ std::vector<Hex> AHexGridManager::GetHexLine(const Hex& StartHex, const Hex& End
     }
 
     return Results;
+}
+
+std::vector<Hex> AHexGridManager::GetShortestPath(Hex Start, Hex End)
+{
+    std::vector<Hex> Path;
+    
 }
 
 Hex AHexGridManager::HexRound(const FractionalHex h) const
@@ -276,4 +294,14 @@ void AHexGridManager::UnselectHexes()
     }
 
     SelectedHexes.clear();
+}
+
+int AHexGridManager::GetHexCost(const Hex& Tile)
+{
+    if (HexTileCostMap.count(Tile.HexType))
+    {
+        return HexTileCostMap[Tile.HexType];
+    }
+
+    return 1000;
 }

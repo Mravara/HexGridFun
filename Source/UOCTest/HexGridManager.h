@@ -55,9 +55,18 @@ public:
 
 	// World location to fractional Hex -> used to find Hex
 	FractionalHex LocationToFractionalHex(const FVector& Location) const;
+
+    // Lerp hex
     FractionalHex LerpHex(Hex a, Hex b, double t);
+
+    // Better precision lerp
     static float PreciseLerp(double a, double b, double t);
+
+    // Get line in hexes
     std::vector<Hex> GetHexLine(const Hex& StartHex, const Hex& EndHex);
+
+    // Get path in hexes
+    std::vector<Hex> GetShortestPath(Hex Start, Hex End);
 
     // Returns associated blueprint to Hex 
 	AHexTile* GetTileByHex(Hex& H);
@@ -81,6 +90,8 @@ public:
 	void SelectHexes(const std::vector<Hex>& Hexes);
 	
 	void UnselectHexes();
+    
+    int GetHexCost(const Hex& Tile);
 
 protected:
 	// Called when the game starts or when spawned
@@ -172,6 +183,12 @@ private:
 	};
     
 	std::unordered_set<Hex> Map;
+
+    std::map<EHexTypes, int> HexTileCostMap = {
+        {EHexTypes::Dirt, 1},
+        {EHexTypes::Grass, 5},
+        {EHexTypes::Water, 10},
+    };
     
 	std::map<Hex, AHexTile*> HexTileMap;
 
@@ -179,3 +196,67 @@ private:
 
     std::vector<Hex> SelectedHexes;
 };
+
+
+struct GridLocation {
+    int x, y;
+};
+
+inline double heuristic(GridLocation a, GridLocation b) {
+    return std::abs(a.x - b.x) + std::abs(a.y - b.y);
+}
+
+template<typename T, typename priority_t>
+struct PriorityQueue {
+    typedef std::pair<priority_t, T> PQElement;
+    std::priority_queue<PQElement, std::vector<PQElement>,
+                   std::greater<PQElement>> elements;
+
+    inline bool empty() const {
+        return elements.empty();
+    }
+
+    inline void put(T item, priority_t priority) {
+        elements.emplace(priority, item);
+    }
+
+    T get() {
+        T best_item = elements.top().second;
+        elements.pop();
+        return best_item;
+    }
+};
+
+template<typename Location, typename Graph>
+void a_star_search
+  (Graph graph,
+   Location start,
+   Location goal,
+   std::unordered_map<Location, Location>& came_from,
+   std::unordered_map<Location, double>& cost_so_far)
+{
+    PriorityQueue<Location, double> frontier;
+    frontier.put(start, 0);
+
+    came_from[start] = start;
+    cost_so_far[start] = 0;
+  
+    while (!frontier.empty()) {
+        Location current = frontier.get();
+
+        if (current == goal) {
+            break;
+        }
+
+        for (Location next : graph.neighbors(current)) {
+            double new_cost = cost_so_far[current] + graph.cost(current, next);
+            if (cost_so_far.find(next) == cost_so_far.end()
+                || new_cost < cost_so_far[next]) {
+                cost_so_far[next] = new_cost;
+                double priority = new_cost + heuristic(next, goal);
+                frontier.put(next, priority);
+                came_from[next] = current;
+                }
+        }
+    }
+}

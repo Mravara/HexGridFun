@@ -199,6 +199,9 @@ FVector APlayerCamera::GetMouseWorldLocation(FVector2D& MousePosition) const
 
 void APlayerCamera::MoveCamera(const FInputActionValue& Value)
 {
+    if (IsDraggingCamera)
+        return;
+    
     const FVector2d MovementVector = Value.Get<FVector2d>();
 
     if (Controller)
