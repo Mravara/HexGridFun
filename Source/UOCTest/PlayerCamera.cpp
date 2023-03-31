@@ -156,6 +156,8 @@ void APlayerCamera::OnMouseClicked()
 	if (HexTile)
 	{
 		HexTile->ShuffleMaterials();
+	    EHexTypes NewType = static_cast<EHexTypes>((static_cast<int>(HexTile->TileType) + 1) % static_cast<int>(EHexTypes::MAX));
+	    HexTile->SetType(NewType, GameMode->GridManager->GetMaterial(NewType));
 	}
 }
 
@@ -349,7 +351,8 @@ void APlayerCamera::OnRightMouseModifiedHold()
     GameMode->GridManager->UnselectHexes();
 
     // Select Line
-    std::vector<Hex> Hexes = GameMode->GridManager->GetHexLine(StartHex, EndHex);
+    // std::vector<Hex> Hexes = GameMode->GridManager->GetHexLine(StartHex, EndHex);
+    std::vector<Hex> Hexes = GameMode->GridManager->GetShortestPath(StartHex, EndHex);
     GameMode->GridManager->SelectHexes(Hexes);
 
     // Draw line
@@ -390,4 +393,3 @@ void APlayerCamera::DrawLine(const FColor Color, bool DrawDots) const
 	// int Distance = GameMode->GridManager->Distance(StartHex, EndHex);
 	// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("Distance: %d"), Distance)); // int
 }
-

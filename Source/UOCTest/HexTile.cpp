@@ -25,6 +25,13 @@ void AHexTile::SetCoordinates(const int X, const int Y, const int Z)
 	Coordinates = FIntVector(X, Y, Z);
 }
 
+void AHexTile::SetType(EHexTypes Type, UMaterialInstance* Material)
+{
+    TileType = Type;
+    DefaultMaterial = Material;
+    MeshComponent->SetMaterial(0, Material);
+}
+
 // Called when the game starts or when spawned
 void AHexTile::BeginPlay()
 {

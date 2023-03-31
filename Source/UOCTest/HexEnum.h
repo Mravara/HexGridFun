@@ -9,5 +9,6 @@ enum class EHexTypes : uint8
 	Grass,
 	Water,
 	Dirt,
-	Blocked
+	Blocked,
+    MAX
 };

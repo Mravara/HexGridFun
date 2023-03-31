@@ -3,6 +3,7 @@
 #pragma once
 
 #include <map>
+#include <queue>
 #include <unordered_set>
 
 #include "CoreMinimal.h"
@@ -13,30 +14,43 @@
 
 struct Hex;
 
-// Map storage
-namespace std {
-	template <> struct hash<Hex> {
-		size_t operator()(const Hex& h) const {
-			hash<int> int_hash;
-			size_t hq = int_hash(h.Q);
-			size_t hr = int_hash(h.R);
-			return hq ^ (hr + 0x9e3779b9 + (hq << 6) + (hq >> 2));
-		}
-	};
-}
-
 // Point for Grid Layout
-struct Point {
+struct Point
+{
 	double X, Y;
 	Point(double x_, double y_): X(x_), Y(y_) {}
 };
 
 // Fraction
-struct FractionalHex {
+struct FractionalHex
+{
 	const double Q, R, S;
 	FractionalHex(double q_, double r_, double s_)
 	: Q(q_), R(r_), S(s_) {}
 };
+
+
+// combines two hashes
+inline size_t hexHashCombine(int h1, int h2)
+{
+    return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+}
+
+inline size_t hexToHash(const Hex& h)
+{
+    return hexHashCombine(hexHashCombine(h.Q, h.R), h.S);
+}
+
+namespace std
+{
+    template<> struct hash<Hex>
+    {
+        size_t operator()(const Hex& h) const noexcept
+        {
+            return hexToHash(h);
+        }
+    };
+}
 
 UCLASS()
 class UOCTEST_API AHexGridManager : public AActor
@@ -66,7 +80,7 @@ public:
     std::vector<Hex> GetHexLine(const Hex& StartHex, const Hex& EndHex);
 
     // Get path in hexes
-    std::vector<Hex> GetShortestPath(Hex Start, Hex End);
+    std::vector<Hex> GetShortestPath(const Hex& Start, const Hex& End);
 
     // Returns associated blueprint to Hex 
 	AHexTile* GetTileByHex(Hex& H);
@@ -90,8 +104,11 @@ public:
 	void SelectHexes(const std::vector<Hex>& Hexes);
 	
 	void UnselectHexes();
-    
-    int GetHexCost(const Hex& Tile);
+
+    float GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& End);
+
+    // Return Material of type
+    UMaterialInstance* GetMaterial(EHexTypes Type);
 
 protected:
 	// Called when the game starts or when spawned
@@ -100,12 +117,18 @@ protected:
 private:
 	void GenerateGrid();
 
-	// Rounding from fractal coordinates
+    // Calculate and return neighbors
+    std::vector<Hex> GetNeighbors(const Hex& H);
+
+    // Get direction between two hexes
+    Hex GetDirection(const Hex& From, const Hex& To);
+
+    // Rounding from fractal coordinates
 	Hex HexRound(FractionalHex h) const;
 	
 	// Arithmetics
-	static Hex Add(const Hex A, const Hex B);
-	static Hex Subtract(const Hex A, const Hex B);
+	static Hex Add(const Hex A, const Hex B);    
+    static Hex Subtract(const Hex A, const Hex B);
 	static Hex Multiply(const Hex Tile, int Multiplier);
 	static Hex Divide(const Hex Tile, int Divisor);
 
@@ -126,16 +149,16 @@ private:
 	FVector TileOffset;
 
 	UPROPERTY(EditAnywhere, Category = "Hex Grid | Number of tiles")
-	int LeftCount = -5;
+	int LeftCount = -30;
 	
 	UPROPERTY(EditAnywhere, Category = "Hex Grid | Number of tiles")
-    int RightCount = 5;
+    int RightCount = 30;
 	
 	UPROPERTY(EditAnywhere, Category = "Hex Grid | Number of tiles")
-	int UpCount = -5;
+	int UpCount = -30;
 
 	UPROPERTY(EditAnywhere, Category = "Hex Grid | Number of tiles")
-	int DownCount = 5;
+	int DownCount = 30;
 
 	UPROPERTY(EditAnywhere, Category = "Hex Grid | Number of tiles")
 	bool IsFlatTopLayout = true;
@@ -172,22 +195,20 @@ private:
     UMaterialInstance* SelectedMaterial;
     
 	// All directions
-	TArray<FIntVector> DirectionVectors = TArray
+	TArray<Hex> DirectionVectors = TArray
 	{
-		FIntVector(1, 0, -1),
-		FIntVector(1, -1, 0),
-		FIntVector(0, -1, 1),
-		FIntVector(-1, 0, 1),
-		FIntVector(-1, 1, 0),
-		FIntVector(0, 1, -1)
+		Hex(1, 0, -1),
+		Hex(1, -1, 0),
+		Hex(0, -1, 1),
+		Hex(-1, 0, 1),
+		Hex(-1, 1, 0),
+		Hex(0, 1, -1)
 	};
-    
-	std::unordered_set<Hex> Map;
 
-    std::map<EHexTypes, int> HexTileCostMap = {
+    std::map<EHexTypes, float> HexTileCostMap = {
         {EHexTypes::Dirt, 1},
-        {EHexTypes::Grass, 5},
-        {EHexTypes::Water, 10},
+        {EHexTypes::Grass, 3},
+        {EHexTypes::Water, 5},
     };
     
 	std::map<Hex, AHexTile*> HexTileMap;
@@ -197,66 +218,26 @@ private:
     std::vector<Hex> SelectedHexes;
 };
 
+struct PriorityQueue
+{
+    typedef std::pair<float, Hex> HexPrioPair;
+    
+    std::priority_queue<HexPrioPair, std::vector<HexPrioPair>, std::greater<HexPrioPair>> elements;
 
-struct GridLocation {
-    int x, y;
-};
-
-inline double heuristic(GridLocation a, GridLocation b) {
-    return std::abs(a.x - b.x) + std::abs(a.y - b.y);
-}
-
-template<typename T, typename priority_t>
-struct PriorityQueue {
-    typedef std::pair<priority_t, T> PQElement;
-    std::priority_queue<PQElement, std::vector<PQElement>,
-                   std::greater<PQElement>> elements;
-
-    inline bool empty() const {
+    inline bool empty() const
+    {
         return elements.empty();
     }
 
-    inline void put(T item, priority_t priority) {
-        elements.emplace(priority, item);
+    inline void put(Hex hex, float priority)
+    {
+        elements.emplace(priority, hex);
     }
 
-    T get() {
-        T best_item = elements.top().second;
+    Hex get()
+    {
+        Hex best_item = elements.top().second;
         elements.pop();
         return best_item;
     }
 };
-
-template<typename Location, typename Graph>
-void a_star_search
-  (Graph graph,
-   Location start,
-   Location goal,
-   std::unordered_map<Location, Location>& came_from,
-   std::unordered_map<Location, double>& cost_so_far)
-{
-    PriorityQueue<Location, double> frontier;
-    frontier.put(start, 0);
-
-    came_from[start] = start;
-    cost_so_far[start] = 0;
-  
-    while (!frontier.empty()) {
-        Location current = frontier.get();
-
-        if (current == goal) {
-            break;
-        }
-
-        for (Location next : graph.neighbors(current)) {
-            double new_cost = cost_so_far[current] + graph.cost(current, next);
-            if (cost_so_far.find(next) == cost_so_far.end()
-                || new_cost < cost_so_far[next]) {
-                cost_so_far[next] = new_cost;
-                double priority = new_cost + heuristic(next, goal);
-                frontier.put(next, priority);
-                came_from[next] = current;
-                }
-        }
-    }
-}

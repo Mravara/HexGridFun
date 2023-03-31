@@ -31,6 +31,8 @@ public:
 
 	void SetCoordinates(int Q, int R, int S);
 
+    void SetType(EHexTypes Type, UMaterialInstance* Material);
+
 		// operators
 	FORCEINLINE bool operator == (const AHexTile* Other) const
 	{

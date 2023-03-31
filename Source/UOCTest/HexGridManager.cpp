@@ -72,17 +72,6 @@ void AHexGridManager::GenerateGrid()
 		{
 		    // Create hex
 			Hex hex = Hex(q, r, -q-r, EHexTypes::Grass);
-		    
-		    // Add neighbors
-	        for (int i = 0; i < DirectionVectors.Num(); ++i)
-	        {
-	            FIntVector Direction = DirectionVectors[i];
-		        Hex Neighbor = Hex(hex.Q + Direction.X, hex.R + Direction.Y, hex.S + Direction.Z);
-		        if (HexTileMap.count(Neighbor))
-		        {
-		            hex.Neighbors[i] = Neighbor;
-		        }
-		    }
 
 		    // Get world location and rotation
 			Point SpawnLocation = HexToWorldPoint(hex);
@@ -97,6 +86,48 @@ void AHexGridManager::GenerateGrid()
 			HexTileMap[hex] = Tile;
 		}
 	}
+}
+
+std::vector<Hex> AHexGridManager::GetNeighbors(const Hex& H)
+{
+    std::vector<Hex> Neighbors;
+    for (auto Direction : DirectionVectors)
+    {
+        Hex TmpHex = Add(H, Direction);
+        if (HexTileMap.count(TmpHex) > 0)
+        {
+            Neighbors.push_back(TmpHex);
+        }
+    }
+
+    return Neighbors;
+}
+
+Hex AHexGridManager::GetDirection(const Hex& From, const Hex& To)
+{
+    for (auto Value : DirectionVectors)
+    {
+        Hex TmpHex = Add(From, Value);
+        if (TmpHex == To)
+            return Value;
+    }
+
+    return Hex();
+}
+// get direction from 1 hex to another
+// check if the next one will go into same direction
+// if yes, add epsilon to the cost
+
+UMaterialInstance* AHexGridManager::GetMaterial(EHexTypes Type)
+{
+    if (Materials.count(Type))
+    {
+        return Materials[Type];
+    }
+    else
+    {
+        return Materials[EHexTypes::Invalid];
+    }
 }
 
 AHexTile* AHexGridManager::GetTileByHex(Hex& H)
@@ -154,7 +185,8 @@ FractionalHex AHexGridManager::LocationToFractionalHex(const FVector& Location) 
 	return FractionalHex(q, r, -q - r);
 }
 
-FractionalHex AHexGridManager::LerpHex(Hex a, Hex b, double t) {
+FractionalHex AHexGridManager::LerpHex(Hex a, Hex b, double t)
+{
     return FractionalHex(PreciseLerp(a.Q, b.Q, t),
                          PreciseLerp(a.R, b.R, t),
                          PreciseLerp(a.S, b.S, t));
@@ -182,10 +214,71 @@ std::vector<Hex> AHexGridManager::GetHexLine(const Hex& StartHex, const Hex& End
     return Results;
 }
 
-std::vector<Hex> AHexGridManager::GetShortestPath(Hex Start, Hex End)
+std::vector<Hex> AHexGridManager::GetShortestPath(const Hex& Start, const Hex& End)
 {
     std::vector<Hex> Path;
+    PriorityQueue frontier;
+    frontier.put(Start, 0);
+
+    std::vector<Hex> path;
+    std::unordered_map<Hex, Hex> came_from;
+    std::unordered_map<Hex, double> cost_so_far;
     
+    came_from[Start] = Start;
+    cost_so_far[Start] = 0;
+
+    // Find End Hex
+    while (!frontier.empty())
+    {
+        Hex current = frontier.get();
+
+        if (current == End)
+        {
+            break;
+        }
+
+        for (Hex next : GetNeighbors(current))
+        {
+            if (HexTileMap.count(next) == 0)
+            {
+                continue;
+            }
+
+            AHexTile* Tile = GetTileByHex(next);
+            if (!Tile || Tile->TileType == EHexTypes::Invalid || Tile->TileType == EHexTypes::Blocked)
+            {
+                continue;
+            }
+            
+            double new_cost = cost_so_far[current] + GetHexCost(current, next, came_from[current], End);
+
+            if (cost_so_far.find(next) == cost_so_far.end() || new_cost < cost_so_far[next])
+            {
+                cost_so_far[next] = new_cost;
+                double priority = new_cost + Distance(next, End);
+                frontier.put(next, priority);
+                came_from[next] = current;
+            }
+        }
+    }
+
+    Hex current = End;
+    if (came_from.find(End) == came_from.end())
+    {
+        return path; // no path can be found
+    }
+
+    // Generate path
+    while (current != Start)
+    {
+        path.push_back(current);
+        current = came_from[current];
+    }
+    
+    path.push_back(Start); // optional
+    std::reverse(path.begin(), path.end());
+
+    return path;
 }
 
 Hex AHexGridManager::HexRound(const FractionalHex h) const
@@ -296,11 +389,20 @@ void AHexGridManager::UnselectHexes()
     SelectedHexes.clear();
 }
 
-int AHexGridManager::GetHexCost(const Hex& Tile)
+float AHexGridManager::GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& End)
 {
-    if (HexTileCostMap.count(Tile.HexType))
+    EHexTypes Type = HexTileMap[Next]->TileType;
+    if (HexTileCostMap.count(Type))
     {
-        return HexTileCostMap[Tile.HexType];
+        float Cost = HexTileCostMap[Type]; 
+        Hex LastDirection = GetDirection(Last, Current);
+        Hex NextDirection = GetDirection(Current, Next);
+        if (LastDirection == NextDirection)
+        {
+            Cost += 0.0001;
+        }
+
+        return Cost;
     }
 
     return 1000;
