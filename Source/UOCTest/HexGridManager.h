@@ -92,8 +92,9 @@ public:
 	FVector HexToWorldLocation(Hex Tile) const;
 	
 	static int Length(const Hex Tile);
+    static int ManhattanDistance(const Hex& A, const Hex& B);
 
-	static int Distance(const Hex A, const Hex B);
+    static int Distance(const Hex& A, const Hex& B);
 
 	// returns a vector of Hexes in a desired Rangee
 	std::vector<Hex> GetHexesInRange(Hex StartingHex, int Range) const;
@@ -105,7 +106,7 @@ public:
 	
 	void UnselectHexes();
 
-    float GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& End);
+    float GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& Start, const Hex& End);
 
     // Return Material of type
     UMaterialInstance* GetMaterial(EHexTypes Type);
@@ -121,7 +122,8 @@ private:
     std::vector<Hex> GetNeighbors(const Hex& H);
 
     // Get direction between two hexes
-    Hex GetDirection(const Hex& From, const Hex& To);
+    Hex GetHexDirection(const Hex& From, const Hex& To);
+    FVector GetVectorDirection(const Hex& From, const Hex& To);
 
     // Rounding from fractal coordinates
 	Hex HexRound(FractionalHex h) const;

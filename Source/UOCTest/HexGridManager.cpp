@@ -103,20 +103,15 @@ std::vector<Hex> AHexGridManager::GetNeighbors(const Hex& H)
     return Neighbors;
 }
 
-Hex AHexGridManager::GetDirection(const Hex& From, const Hex& To)
+Hex AHexGridManager::GetHexDirection(const Hex& From, const Hex& To)
 {
-    for (auto Value : DirectionVectors)
-    {
-        Hex TmpHex = Add(From, Value);
-        if (TmpHex == To)
-            return Value;
-    }
-
-    return Hex();
+    return Subtract(To, From);
 }
-// get direction from 1 hex to another
-// check if the next one will go into same direction
-// if yes, add epsilon to the cost
+
+FVector AHexGridManager::GetVectorDirection(const Hex& From, const Hex& To)
+{
+    return FVector(To.Q - From.Q, To.R - From.R, To.S - From.S);
+}
 
 UMaterialInstance* AHexGridManager::GetMaterial(EHexTypes Type)
 {
@@ -216,7 +211,6 @@ std::vector<Hex> AHexGridManager::GetHexLine(const Hex& StartHex, const Hex& End
 
 std::vector<Hex> AHexGridManager::GetShortestPath(const Hex& Start, const Hex& End)
 {
-    std::vector<Hex> Path;
     PriorityQueue frontier;
     frontier.put(Start, 0);
 
@@ -250,12 +244,12 @@ std::vector<Hex> AHexGridManager::GetShortestPath(const Hex& Start, const Hex& E
                 continue;
             }
             
-            double new_cost = cost_so_far[current] + GetHexCost(current, next, came_from[current], End);
+            double new_cost = cost_so_far[current] + GetHexCost(current, next, came_from[current], Start, End);
 
             if (cost_so_far.find(next) == cost_so_far.end() || new_cost < cost_so_far[next])
             {
                 cost_so_far[next] = new_cost;
-                double priority = new_cost + Distance(next, End);
+                double priority = new_cost + ManhattanDistance(next, End);
                 frontier.put(next, priority);
                 came_from[next] = current;
             }
@@ -276,6 +270,15 @@ std::vector<Hex> AHexGridManager::GetShortestPath(const Hex& Start, const Hex& E
     }
     
     path.push_back(Start); // optional
+    std::reverse(path.begin(), path.end());
+
+    Hex Current = End;
+    path.push_back(Current);
+    while (Current != Start)
+    {
+        Current = came_from[Current];
+        path.push_back(Current);
+    }
     std::reverse(path.begin(), path.end());
 
     return path;
@@ -333,7 +336,12 @@ int AHexGridManager::Length(const Hex Tile)
 		FMath::Abs(Tile.S)) / 2);
 }
 
-int AHexGridManager::Distance(const Hex A, const Hex B)
+int AHexGridManager::ManhattanDistance(const Hex& A, const Hex& B)
+{
+    return FMath::Abs(A.Q - B.Q) + FMath::Abs(A.R - B.R) + FMath::Abs(A.S - B.S);
+}
+
+int AHexGridManager::Distance(const Hex& A, const Hex& B)
 {
 	return Length(Subtract(A, B));
 }
@@ -389,20 +397,26 @@ void AHexGridManager::UnselectHexes()
     SelectedHexes.clear();
 }
 
-float AHexGridManager::GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& End)
+float AHexGridManager::GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& Start, const Hex& End)
 {
     EHexTypes Type = HexTileMap[Next]->TileType;
     if (HexTileCostMap.count(Type))
     {
         float Cost = HexTileCostMap[Type]; 
-        Hex LastDirection = GetDirection(Last, Current);
-        Hex NextDirection = GetDirection(Current, Next);
-        if (LastDirection == NextDirection)
-        {
-            Cost += 0.0001;
-        }
+        // Hex LastDirection = GetHexDirection(Last, Current);
+        // Hex NextDirection = GetHexDirection(Current, Next);
+        // if (LastDirection == NextDirection)
+        // {
+        //     Cost += 0.0001;
+        // }
 
-        return Cost;
+        FVector StartToEndVector = GetVectorDirection(Current, Next);
+        FVector NextToEndVector = GetVectorDirection(Next, End);
+
+        double DotSinisa = FVector::DotProduct(StartToEndVector.GetSafeNormal(), NextToEndVector.GetSafeNormal());
+        DotSinisa = DotSinisa / 100;
+
+        return Cost - DotSinisa;
     }
 
     return 1000;
