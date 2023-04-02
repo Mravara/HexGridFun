@@ -344,8 +344,8 @@ void APlayerCamera::OnRightMouseModifiedClicked()
 void APlayerCamera::OnRightMouseModifiedHold()
 {
     const AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-    const FVector ClickLocation = GetMouseWorldLocation();
-    EndHex = GameMode->GridManager->WorldToHex(ClickLocation);
+    const FVector MouseLocation = GetMouseWorldLocation();
+    EndHex = GameMode->GridManager->WorldToHex(MouseLocation);
 
     // Unselect hexes
     GameMode->GridManager->UnselectHexes();

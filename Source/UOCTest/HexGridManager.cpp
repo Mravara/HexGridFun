@@ -209,6 +209,110 @@ std::vector<Hex> AHexGridManager::GetHexLine(const Hex& StartHex, const Hex& End
     return Results;
 }
 
+// custom approach, didn't work
+// std::vector<Hex> AHexGridManager::GetShortestPath(const Hex& Start, const Hex& End)
+// {
+//     std::list<Hex> ToSearch = { Start };
+//     std::list<Hex> Processed;
+//     std::vector<Hex> Path;
+//     std::map<Hex, PathfindingInfo> InfoMap;
+//
+//     // mijenjam structove i ocekujem da ce biti promijenjeni non stop
+//     // treba napraviti mapu koja drzi struct kao key i kao value mozda drugi struct koji drzi vrijednosti i onda radim s referencama?
+//     // mozda koristiti hexove u ovom loopu kao reference? --> mozda bolja opcija
+//
+//     while (!ToSearch.empty())
+//     {
+//         Hex Current = ToSearch.front();
+//
+//         // make sure it exists
+//         if (!InfoMap.count(Current))
+//         {
+//             auto CurrentInfoIt = InfoMap.emplace(Current, PathfindingInfo());
+//             PathfindingInfo& NeighborInfo = CurrentInfoIt.first->second;
+//             NeighborInfo.SetToStartCost(Distance(Current, Start));
+//             NeighborInfo.SetToEndCost(Distance(Current, End));
+//         }
+//         
+//         // Find next
+//         for (Hex Next : ToSearch)
+//         {
+//             // make sure it exists
+//             if (InfoMap.count(Next) == 0)
+//             {
+//                 auto NextInfoIt = InfoMap.emplace(Current, PathfindingInfo());
+//                 PathfindingInfo& NeighborInfo = NextInfoIt.first->second;
+//                 NeighborInfo.SetToStartCost(Distance(Next, Start));
+//                 NeighborInfo.SetToEndCost(Distance(Next, End));
+//             }
+//             
+//             if (InfoMap[Next].GetTotalCost() < InfoMap[Current].GetTotalCost() ||
+//                 InfoMap[Next].GetTotalCost() == InfoMap[Current].GetTotalCost() && InfoMap[Next].GetToEndCost() < InfoMap[Current].GetToEndCost())
+//             {
+//                 Current = Next;
+//             }
+//         }
+//
+//         Processed.push_back(Current);
+//         ToSearch.remove(Current);
+//
+//         if (Current == End)
+//         {
+//             Hex CurrentPathHex = End;
+//             int count = 100;
+//             while (CurrentPathHex != Start)
+//             {
+//                 Path.push_back(CurrentPathHex);
+//                 CurrentPathHex = InfoMap[CurrentPathHex].GetConnection();
+//                 count--;
+//                 if (count < 0)
+//                 {
+//                     GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("EARLY!!!!!!!!!!!: %d %d %d"), CurrentPathHex.Q, CurrentPathHex.R, CurrentPathHex.S));
+//                     return Path;
+//                 }
+//             }
+//             return Path;
+//         }
+//
+//         if (Start != End)
+//         {
+//             for (Hex& Neighbor : GetNeighbors(Current))
+//             {
+//                 bool AlreadyProcessed = std::find(Processed.begin(), Processed.end(), Neighbor) != Processed.end(); 
+//                 if (AlreadyProcessed)
+//                     continue;
+//             
+//                 bool InSearchList = std::find(ToSearch.begin(), ToSearch.end(), Neighbor) != ToSearch.end();
+//                 
+//                 float CostToNeighbor = Distance(Start, Current) + ManhattanDistance(Current, Neighbor);
+//
+//                 if (!InSearchList || (CostToNeighbor < Distance(Neighbor, Start)))
+//                 {
+//
+//                     auto NeighborInfoIt = InfoMap.emplace(Neighbor, PathfindingInfo());
+//                     PathfindingInfo& NeighborInfo = NeighborInfoIt.first->second;
+//                     
+//                     // fill info
+//                     NeighborInfo.SetToStartCost(CostToNeighbor);
+//                     NeighborInfo.SetConnection(Current);
+//
+//                     if (!InSearchList)
+//                     {
+//                         NeighborInfo.SetToEndCost(ManhattanDistance(Neighbor, End));
+//                         ToSearch.push_back(Neighbor);
+//                     }
+//
+//                     // add to map
+//                     InfoMap[Neighbor] = NeighborInfo;
+//                 }
+//             }
+//         }
+//         
+//     }
+//
+//     return Path;
+// }
+
 std::vector<Hex> AHexGridManager::GetShortestPath(const Hex& Start, const Hex& End)
 {
     PriorityQueue frontier;
@@ -397,12 +501,28 @@ void AHexGridManager::UnselectHexes()
     SelectedHexes.clear();
 }
 
+float AHexGridManager::GetFromStartCost(const Hex& Start, const Hex& Current)
+{
+    return Distance(Start, Current);
+}
+
+float AHexGridManager::GetToEndCost(const Hex& Current, const Hex& End)
+{
+    return Distance(Current, End);
+}
+
+float AHexGridManager::GetTotalCost(const Hex& Start, const Hex& Current, const Hex& End)
+{
+    return GetFromStartCost(Start, Current) + GetToEndCost(Current, End); 
+}
+
 float AHexGridManager::GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& Start, const Hex& End)
 {
     EHexTypes Type = HexTileMap[Next]->TileType;
     if (HexTileCostMap.count(Type))
     {
-        float Cost = HexTileCostMap[Type]; 
+        float Cost = HexTileCostMap[Type];
+        // penalty for going in the same direction too much
         // Hex LastDirection = GetHexDirection(Last, Current);
         // Hex NextDirection = GetHexDirection(Current, Next);
         // if (LastDirection == NextDirection)
@@ -410,13 +530,13 @@ float AHexGridManager::GetHexCost(const Hex& Current, const Hex& Next, const Hex
         //     Cost += 0.0001;
         // }
 
-        FVector StartToEndVector = GetVectorDirection(Current, Next);
-        FVector NextToEndVector = GetVectorDirection(Next, End);
+        // FVector StartToEndVector = GetVectorDirection(Current, Next);
+        // FVector NextToEndVector = GetVectorDirection(Next, End);
 
-        double DotSinisa = FVector::DotProduct(StartToEndVector.GetSafeNormal(), NextToEndVector.GetSafeNormal());
-        DotSinisa = DotSinisa / 100;
+        // double DotSinisa = FVector::DotProduct(StartToEndVector.GetSafeNormal(), NextToEndVector.GetSafeNormal());
+        // DotSinisa = DotSinisa / 100;
 
-        return Cost - DotSinisa;
+        return Cost;
     }
 
     return 1000;

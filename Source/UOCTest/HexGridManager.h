@@ -52,6 +52,26 @@ namespace std
     };
 }
 
+struct PathfindingInfo
+{    
+    int GetTotalCost() const { return ToStartCost + ToEndCost; }
+    
+    int GetToStartCost() { return ToStartCost; }
+    void SetToStartCost(int Cost) { ToStartCost = Cost; }
+
+    int GetToEndCost() { return ToEndCost; }
+    void SetToEndCost(int Cost) { ToEndCost = Cost; }
+
+    void SetConnection(Hex connection) { Connection = connection; }
+    Hex GetConnection() { return Connection; }
+    
+private:
+    Hex Connection;
+    int ToStartCost = 0;
+    int ToEndCost = 0;
+    int TotalCost = 0;
+};
+
 UCLASS()
 class UOCTEST_API AHexGridManager : public AActor
 {
@@ -106,6 +126,12 @@ public:
 	
 	void UnselectHexes();
 
+    // Calculate costs
+    float GetFromStartCost(const Hex& Start, const Hex& Current);
+    float GetToEndCost(const Hex& Current, const Hex& End);
+    float GetTotalCost(const Hex& Start, const Hex& Current, const Hex& End);
+
+    // Old cost calculation
     float GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& Start, const Hex& End);
 
     // Return Material of type
