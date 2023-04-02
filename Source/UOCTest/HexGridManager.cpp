@@ -536,6 +536,16 @@ float AHexGridManager::GetHexCost(const Hex& Current, const Hex& Next, const Hex
         // double DotSinisa = FVector::DotProduct(StartToEndVector.GetSafeNormal(), NextToEndVector.GetSafeNormal());
         // DotSinisa = DotSinisa / 100;
 
+        // check if current hex is on the line and reduce 0.001 from the cost.
+        const AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+
+        std::vector<Hex> Hexes = GameMode->GridManager->GetHexLine(Start, End);
+        if (std::find(Hexes.begin(), Hexes.end(), Current) != Hexes.end())
+        {
+            // exists
+            Cost -= 0.001f;
+        }
+
         return Cost;
     }
 
