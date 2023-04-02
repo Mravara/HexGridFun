@@ -16,13 +16,7 @@ struct UOCTEST_API Hex
     Hex(const int q, const int r) :
         Q(q), R(r), S(-q-r) {}
 
-	Hex(const int q, const int r, const EHexTypes hexType) :
-        Q(q), R(r), S(-q-r) {}
-
     Hex(const int q, const int r, const int s) :
-        Q(q), R(r), S(s) {}
-	
-	Hex(const int q, const int r, const int s, const EHexTypes hexType) :
         Q(q), R(r), S(s) {}
 	
 	bool operator==(const Hex Tile) const

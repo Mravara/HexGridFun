@@ -351,7 +351,7 @@ void APlayerCamera::OnRightMouseModifiedHold()
     GameMode->GridManager->UnselectHexes();
 
     // Select Line
-    // std::vector<Hex> Hexes = GameMode->GridManager->GetHexLine(StartHex, EndHex);
+    //std::vector<Hex> Hexes = GameMode->GridManager->GetHexLine(StartHex, EndHex);
     std::vector<Hex> Hexes = GameMode->GridManager->GetShortestPath(StartHex, EndHex);
     GameMode->GridManager->SelectHexes(Hexes);
 

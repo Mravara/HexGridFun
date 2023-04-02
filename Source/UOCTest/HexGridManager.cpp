@@ -71,7 +71,7 @@ void AHexGridManager::GenerateGrid()
 		for (int r = UpCount - QOffset; r <= DownCount - QOffset; r++)
 		{
 		    // Create hex
-			Hex hex = Hex(q, r, -q-r, EHexTypes::Grass);
+			Hex hex = Hex(q, r, -q-r);
 
 		    // Get world location and rotation
 			Point SpawnLocation = HexToWorldPoint(hex);
@@ -209,17 +209,14 @@ std::vector<Hex> AHexGridManager::GetHexLine(const Hex& StartHex, const Hex& End
     return Results;
 }
 
-// custom approach, didn't work
+// custom approach
 // std::vector<Hex> AHexGridManager::GetShortestPath(const Hex& Start, const Hex& End)
 // {
 //     std::list<Hex> ToSearch = { Start };
 //     std::list<Hex> Processed;
 //     std::vector<Hex> Path;
 //     std::map<Hex, PathfindingInfo> InfoMap;
-//
-//     // mijenjam structove i ocekujem da ce biti promijenjeni non stop
-//     // treba napraviti mapu koja drzi struct kao key i kao value mozda drugi struct koji drzi vrijednosti i onda radim s referencama?
-//     // mozda koristiti hexove u ovom loopu kao reference? --> mozda bolja opcija
+//     std::vector<Hex> Line = GetHexLine(Start, End);
 //
 //     while (!ToSearch.empty())
 //     {
@@ -288,9 +285,17 @@ std::vector<Hex> AHexGridManager::GetHexLine(const Hex& StartHex, const Hex& End
 //
 //                 if (!InSearchList || (CostToNeighbor < Distance(Neighbor, Start)))
 //                 {
-//
 //                     auto NeighborInfoIt = InfoMap.emplace(Neighbor, PathfindingInfo());
 //                     PathfindingInfo& NeighborInfo = NeighborInfoIt.first->second;
+//
+//                     // add tile cost
+//                     NeighborInfo.SetTileCost(GetTileCost(Neighbor));
+//
+//                     // prefer the ones on the line
+//                     if (std::find(Line.begin(), Line.end(), Neighbor) != Line.end())
+//                     {
+//                         NeighborInfo.SetBonusCost(-0.001f);
+//                     }
 //                     
 //                     // fill info
 //                     NeighborInfo.SetToStartCost(CostToNeighbor);
@@ -313,79 +318,87 @@ std::vector<Hex> AHexGridManager::GetHexLine(const Hex& StartHex, const Hex& End
 //     return Path;
 // }
 
+// red blob games
 std::vector<Hex> AHexGridManager::GetShortestPath(const Hex& Start, const Hex& End)
 {
-    PriorityQueue frontier;
-    frontier.put(Start, 0);
+    PriorityQueue Frontier;
+    Frontier.put(Start, 0);
 
-    std::vector<Hex> path;
-    std::unordered_map<Hex, Hex> came_from;
-    std::unordered_map<Hex, double> cost_so_far;
+    std::vector<Hex> Path;
+    std::unordered_map<Hex, Hex> CameFrom;
+    std::unordered_map<Hex, double> CostSoFar;
+
+    std::vector<Hex> Line = GetHexLine(Start, End);
     
-    came_from[Start] = Start;
-    cost_so_far[Start] = 0;
+    CameFrom[Start] = Start;
+    CostSoFar[Start] = 0;
 
     // Find End Hex
-    while (!frontier.empty())
+    while (!Frontier.empty())
     {
-        Hex current = frontier.get();
+        Hex Current = Frontier.get();
 
-        if (current == End)
+        if (Current == End)
         {
             break;
         }
 
-        for (Hex next : GetNeighbors(current))
+        for (Hex Next : GetNeighbors(Current))
         {
-            if (HexTileMap.count(next) == 0)
+            if (HexTileMap.count(Next) == 0)
             {
                 continue;
             }
 
-            AHexTile* Tile = GetTileByHex(next);
+            AHexTile* Tile = GetTileByHex(Next);
             if (!Tile || Tile->TileType == EHexTypes::Invalid || Tile->TileType == EHexTypes::Blocked)
             {
                 continue;
             }
             
-            double new_cost = cost_so_far[current] + GetHexCost(current, next, came_from[current], Start, End);
+            double NewCost = CostSoFar[Current] + GetHexCost(Next);
 
-            if (cost_so_far.find(next) == cost_so_far.end() || new_cost < cost_so_far[next])
+            if (std::find(Line.begin(), Line.end(), Current) != Line.end())
             {
-                cost_so_far[next] = new_cost;
-                double priority = new_cost + ManhattanDistance(next, End);
-                frontier.put(next, priority);
-                came_from[next] = current;
+                NewCost -= 0.0001;
+            }
+
+            if (CostSoFar.find(Next) == CostSoFar.end() || NewCost < CostSoFar[Next])
+            {
+                CostSoFar[Next] = NewCost;
+                double Priority = NewCost + ManhattanDistance(Next, End);
+                Frontier.put(Next, Priority);
+                CameFrom[Next] = Current;
             }
         }
     }
 
-    Hex current = End;
-    if (came_from.find(End) == came_from.end())
+    Hex Current = End;
+    if (CameFrom.find(End) == CameFrom.end())
     {
-        return path; // no path can be found
+        return Path; // no path can be found
     }
 
     // Generate path
-    while (current != Start)
-    {
-        path.push_back(current);
-        current = came_from[current];
-    }
-    
-    path.push_back(Start); // optional
-    std::reverse(path.begin(), path.end());
-
-    Hex Current = End;
-    path.push_back(Current);
     while (Current != Start)
     {
-        Current = came_from[Current];
-        path.push_back(Current);
+        Path.push_back(Current);
+        Current = CameFrom[Current];
     }
-    std::reverse(path.begin(), path.end());
+    
+    Path.push_back(Start); // optional
+    std::reverse(Path.begin(), Path.end());
 
-    return path;
+    Current = End;
+    Path.push_back(Current);
+    while (Current != Start)
+    {
+        Current = CameFrom[Current];
+        Path.push_back(Current);
+    }
+    std::reverse(Path.begin(), Path.end());
+
+    return Path;
 }
 
 Hex AHexGridManager::HexRound(const FractionalHex h) const
@@ -516,38 +529,61 @@ float AHexGridManager::GetTotalCost(const Hex& Start, const Hex& Current, const 
     return GetFromStartCost(Start, Current) + GetToEndCost(Current, End); 
 }
 
-float AHexGridManager::GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& Start, const Hex& End)
+float AHexGridManager::GetTileCost(const Hex& Hex)
 {
-    EHexTypes Type = HexTileMap[Next]->TileType;
+    EHexTypes Type = HexTileMap[Hex]->TileType;
     if (HexTileCostMap.count(Type))
     {
-        float Cost = HexTileCostMap[Type];
-        // penalty for going in the same direction too much
-        // Hex LastDirection = GetHexDirection(Last, Current);
-        // Hex NextDirection = GetHexDirection(Current, Next);
-        // if (LastDirection == NextDirection)
-        // {
-        //     Cost += 0.0001;
-        // }
-
-        // FVector StartToEndVector = GetVectorDirection(Current, Next);
-        // FVector NextToEndVector = GetVectorDirection(Next, End);
-
-        // double DotSinisa = FVector::DotProduct(StartToEndVector.GetSafeNormal(), NextToEndVector.GetSafeNormal());
-        // DotSinisa = DotSinisa / 100;
-
-        // check if current hex is on the line and reduce 0.001 from the cost.
-        const AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-
-        std::vector<Hex> Hexes = GameMode->GridManager->GetHexLine(Start, End);
-        if (std::find(Hexes.begin(), Hexes.end(), Current) != Hexes.end())
-        {
-            // exists
-            Cost -= 0.001f;
-        }
-
-        return Cost;
+        return HexTileCostMap[Type];
     }
 
-    return 1000;
+    return 100;
+}
+
+// optimized
+// float AHexGridManager::GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& Start, const Hex& End)
+// {
+//     EHexTypes Type = HexTileMap[Next]->TileType;
+//     if (HexTileCostMap.count(Type))
+//     {
+//         float Cost = HexTileCostMap[Type];
+//         // penalty for going in the same direction too much
+//         // Hex LastDirection = GetHexDirection(Last, Current);
+//         // Hex NextDirection = GetHexDirection(Current, Next);
+//         // if (LastDirection == NextDirection)
+//         // {
+//         //     Cost += 0.0001;
+//         // }
+//
+//         // FVector StartToEndVector = GetVectorDirection(Current, Next);
+//         // FVector NextToEndVector = GetVectorDirection(Next, End);
+//
+//         // double DotSinisa = FVector::DotProduct(StartToEndVector.GetSafeNormal(), NextToEndVector.GetSafeNormal());
+//         // DotSinisa = DotSinisa / 100;
+//
+//         // check if current hex is on the line and reduce 0.001 from the cost.
+//         const AUOCTestGameMode* GameMode = Cast<AUOCTestGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+//         
+//         std::vector<Hex> Hexes = GameMode->GridManager->GetHexLine(Start, End);
+//         if (std::find(Hexes.begin(), Hexes.end(), Current) != Hexes.end())
+//         {
+//             // exists
+//             Cost -= 0.001f;
+//         }
+//
+//         return Cost;
+//     }
+//
+//     return 1000;
+// }
+
+float AHexGridManager::GetHexCost(const Hex& Tile)
+{
+    EHexTypes Type = HexTileMap[Tile]->TileType;
+    if (HexTileCostMap.count(Type))
+    {
+        return HexTileCostMap[Type];
+    }
+
+    return 1000.f;
 }

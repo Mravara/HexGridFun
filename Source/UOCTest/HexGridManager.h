@@ -53,23 +53,27 @@ namespace std
 }
 
 struct PathfindingInfo
-{    
-    int GetTotalCost() const { return ToStartCost + ToEndCost; }
+{
+    void SetTileCost(float Cost) { TileCost = Cost; }
     
-    int GetToStartCost() { return ToStartCost; }
-    void SetToStartCost(int Cost) { ToStartCost = Cost; }
+    float GetTotalCost() const { return ToStartCost + ToEndCost + TileCost + BonusCost; }
+    void SetBonusCost(float Bonus) { BonusCost = Bonus; }
+    
+    float GetToStartCost() { return ToStartCost + TileCost; }
+    void SetToStartCost(float Cost) { ToStartCost = Cost; }
 
-    int GetToEndCost() { return ToEndCost; }
-    void SetToEndCost(int Cost) { ToEndCost = Cost; }
+    float GetToEndCost() { return ToEndCost + TileCost; }
+    void SetToEndCost(float Cost) { ToEndCost = Cost; }
 
     void SetConnection(Hex connection) { Connection = connection; }
     Hex GetConnection() { return Connection; }
     
 private:
     Hex Connection;
-    int ToStartCost = 0;
-    int ToEndCost = 0;
-    int TotalCost = 0;
+    float ToStartCost = 0;
+    float ToEndCost = 0;
+    float BonusCost = 0;
+    float TileCost = 0;
 };
 
 UCLASS()
@@ -131,8 +135,11 @@ public:
     float GetToEndCost(const Hex& Current, const Hex& End);
     float GetTotalCost(const Hex& Start, const Hex& Current, const Hex& End);
 
+    // Returns cost depending on the tile type EHexTypes (Road, Grass, Terrain)
+    float GetTileCost(const Hex& Hex);
+
     // Old cost calculation
-    float GetHexCost(const Hex& Current, const Hex& Next, const Hex& Last, const Hex& Start, const Hex& End);
+    float GetHexCost(const Hex& Tile);
 
     // Return Material of type
     UMaterialInstance* GetMaterial(EHexTypes Type);
@@ -234,9 +241,9 @@ private:
 	};
 
     std::map<EHexTypes, float> HexTileCostMap = {
-        {EHexTypes::Dirt, 1},
-        {EHexTypes::Grass, 3},
-        {EHexTypes::Water, 5},
+        {EHexTypes::Dirt, 1.f},
+        {EHexTypes::Grass, 3.f},
+        {EHexTypes::Water, 5.f},
     };
     
 	std::map<Hex, AHexTile*> HexTileMap;
